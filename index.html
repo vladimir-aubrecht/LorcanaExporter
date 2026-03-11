@@ -247,6 +247,23 @@
 
                     return output;
                 }
+
+                generateDreambornInk()
+                {
+                    let output = "Set Number,Card Number,Variant,Count,Name,Color,Rarity\n";
+                    for (let i = 0; i < this.cardCollection.length; i++)
+                    {
+                        const card = this.cardCollection[i];
+
+                        const setCode = String(card.cardInfo.setCode).padStart(3, '0');
+                        const number = String(card.cardInfo.number).padStart(3, '0');
+                        
+                        output += setCode + ',' + number + ',' + 'normal,' + card.regularCount + ',' + card.cardInfo.fullName + ',' + card.cardInfo.color + ',' + card.cardInfo.rarity + "\n";
+                        output += setCode + ',' + number + ',' + 'foil,' + card.foiledCount + ',' + card.cardInfo.fullName + ',' + card.cardInfo.color + ',' + card.cardInfo.rarity + "\n";
+                    }
+
+                    return output;
+                }
             }
 
             async function LoadPreview()
@@ -265,6 +282,18 @@
                 const backupCards = lorcanaCards.getGroupedCollectionInfoByBackup(await lorcanaUI.getBackup());
                 const exporter = new Exporter(backupCards);
                 const output = exporter.generateLorcanaGgCsv();
+                
+                lorcanaUI.triggerFileDownload("lorcana.csv", output);       
+            }
+
+            async function downloadDreamBornInk()
+            {
+                event.preventDefault();
+                
+                const lorcanaCards = new LorcanaCards(await LorcanaCards.loadAllCards());
+                const backupCards = lorcanaCards.getGroupedCollectionInfoByBackup(await lorcanaUI.getBackup());
+                const exporter = new Exporter(backupCards);
+                const output = exporter.generateDreambornInk();
                 
                 lorcanaUI.triggerFileDownload("lorcana.csv", output);       
             }
@@ -313,6 +342,7 @@
                 Download:
                 <ul>
                     <li><a href="#" onclick="(async () => { await downloadLorcanaGGCSV() })();">Lorcana.gg</a></li>
+                    <li><a href="#" onclick="(async () => { await downloadDreamBornInk() })();">DreamBorn.Ink</a></li>
                 </ul>
             </div>
         </div>
