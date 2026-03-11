@@ -1,0 +1,323 @@
+<html>
+    <head>
+
+        <style type="text/css">
+            /* Global styles */
+            .gallery {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            /* Backup url section */
+
+            .findBackupUrlSection img {
+                width: 300px;
+            }
+
+            .findBackupUrlSection figure {
+                width: 300px;
+                text-align: center;
+                margin: 0 0 0 0;
+            }
+
+            .findBackupUrlSection figcaption {
+                margin-top: 0.4rem;
+                font-weight: bold;
+            }
+
+            /* Download backup section */
+            .downloadBackupSection {
+
+            }
+
+            .downloadBackupResult {
+                display: none;
+            }
+
+            .downloadBackupResult:has(a[href]:not([href=""])) {
+                display: block;
+            }
+
+            .downloadBackupSection input[type=text] {
+                width: 750px;
+            }
+
+            /* Export cards section */
+
+            .exportSection {
+
+            }
+
+            .exportSectionResult {
+                display: none;
+                margin-top: 1rem;
+            }
+
+            body:has(.previewSection:not(:empty)) .exportSectionResult {
+                display: block;
+            }
+
+
+            /* Preview section*/
+
+            .previewSection img {
+                width: 150px;
+            }
+
+            .previewSection figure {
+                width: 150px;
+                text-align: center;
+                margin: 0 0 0 0;
+            }
+
+
+        </style>
+        <script lang="javascript">
+
+            class LorcanaUI
+            {
+                getBackupUrl()
+                {
+                    const backupUrlTextboxElement = document.querySelector("#BackupUrlTextbox");
+                    const backupId = new URL(backupUrlTextboxElement.value).searchParams.get("id");
+                    return "https://sharing.lorcana.ravensburger.com/backup/" + backupId + ".json";
+                }
+
+                setDownloadUrl(url)
+                {
+                    const downloadUrlResultElement = document.querySelector("#DownloadUrlResult");
+                    downloadUrlResultElement.innerText = url;
+                    downloadUrlResultElement.href = url;
+                }
+
+                async getBackup()
+                {
+                    const backupFile = document.querySelector("#BackupFileSelector").files[0];
+                    
+                    if (!backupFile)
+                        return null;
+
+                    return JSON.parse(await backupFile.text());
+                }
+
+                setPreview(cardCollection)
+                {
+                    const previewSectionResultElement = document.querySelector("#PreviewSectionResult");
+                
+                    previewSectionResultElement.innerHTML = "Found " + cardCollection.length + " cards.";
+
+                    let regular = 0;
+                    let foiled = 0;
+                    let thumbnails = "";
+                    for (let i = 0; i < cardCollection.length; i++)
+                    {
+                        const card = cardCollection[i];
+                        regular += card.regularCount;
+                        foiled += card.foiledCount;
+
+                        thumbnails += "<figure><img src='" + card.cardInfo.images.thumbnail + "' /><figcaption>Regular: "+ card.regularCount + " Foiled: " + card.foiledCount + "</figcaption></figure>";
+                    }
+                    
+                    previewSectionResultElement.innerHTML += " Regular: " + regular + " Foiled: " + foiled + "<br/><br/>";
+                    previewSectionResultElement.innerHTML += "<div class='gallery'>" + thumbnails + "<div>";
+                }
+
+                triggerFileDownload(filename, content, mimeTyp = "text/plain")
+                {
+                    const blob = new Blob([content], { type: mimeTyp });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = filename;
+                    a.style.display = "none";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }
+            }
+
+            class LorcanaCards
+            {
+                constructor(cardsDb)
+                {
+                    this.cardsDb = cardsDb;
+                }
+
+                static async loadAllCards()
+                {
+                    // Downloaded on 2026-03-10 from: https://lorcanajson.org/files/current/en/allCards.json
+                    // It's downloaded to avoid extra load for the source.
+                    const lorcanaAllCardsUrl = "data/allCards.json";
+                    const data = await (await fetch(lorcanaAllCardsUrl)).json();
+                    return data;
+                }
+
+                getCardInfo(id)
+                {
+                    for (let i = 0; i < this.cardsDb.cards.length; i++) 
+                    {
+                        const card = this.cardsDb.cards[i];
+
+                        if (card.id == id)
+                        {
+                            return card;
+                        }
+                    }
+
+                    return null;
+                }
+
+                getCollectionInfoByBackup(backup)
+                {
+                    let outputCards = [];
+
+                    if (backup == null)
+                        return outputCards;
+
+                    for (let i = 0; i < backup.OwnedCardQuantitiesV2.length; i++)
+                    {
+                        const card = backup.OwnedCardQuantitiesV2[i];
+
+                        const cardInfo = this.getCardInfo(card.Id);
+                        outputCards.push({id: card.Id, quantity: card.Quantity, type: card.Type, cardInfo: cardInfo});
+                    }
+
+                    return outputCards;
+                }
+
+                getGroupedCollectionInfoByBackup(backup)
+                {
+                    const collection = this.getCollectionInfoByBackup(backup);
+                    
+                    const groupedByIdCards = Object.groupBy(collection, card => card.id);
+
+                    let output = [];
+
+                    for (const id in groupedByIdCards)
+                    {
+                        const cardSet = groupedByIdCards[id];
+                        
+                        let regularCount = 0;
+                        let foiledCount = 0;
+                        let lastCard = null;
+
+                        cardSet.forEach(card => {
+                            if (card.type == 'Regular')
+                            {
+                                regularCount += card.quantity;
+                            }
+                            else if (card.type == 'Foiled')
+                            {
+                                foiledCount += card.quantity;
+                            }
+
+                            lastCard = card;
+                            lastCard.regularCount = regularCount;
+                            lastCard.foiledCount = foiledCount;
+                        });
+
+                        output.push(lastCard);
+                    }
+
+                    return output;
+                }
+            }
+
+            class Exporter
+            {
+                constructor(cardCollection)
+                {
+                    this.cardCollection = cardCollection;
+                }
+
+                generateLorcanaGgCsv()
+                {
+                    let output = "Normal,Foil,Name,Set,Number\n";
+                    for (let i = 0; i < this.cardCollection.length; i++)
+                    {
+                        const card = this.cardCollection[i];
+
+                        const setCode = String(card.cardInfo.setCode).padStart(3, '0');
+                        const number = String(card.cardInfo.number).padStart(3, '0');
+                        
+                        output += card.regularCount + ',' + card.foiledCount + ',"' + card.cardInfo.fullName + '",' + '"' + setCode + '",' + '"' + number  + '"\n';
+                    }
+
+                    return output;
+                }
+            }
+
+            async function LoadPreview()
+            {
+                const lorcanaCards = new LorcanaCards(await LorcanaCards.loadAllCards());
+                const backupCards = lorcanaCards.getGroupedCollectionInfoByBackup(await lorcanaUI.getBackup());
+                
+                lorcanaUI.setPreview(backupCards);
+            }
+
+            async function downloadLorcanaGGCSV()
+            {
+                event.preventDefault();
+                
+                const lorcanaCards = new LorcanaCards(await LorcanaCards.loadAllCards());
+                const backupCards = lorcanaCards.getGroupedCollectionInfoByBackup(await lorcanaUI.getBackup());
+                const exporter = new Exporter(backupCards);
+                const output = exporter.generateLorcanaGgCsv();
+                
+                lorcanaUI.triggerFileDownload("lorcana.csv", output);       
+            }
+
+            const lorcanaUI = new LorcanaUI();
+        </script>
+    </head>
+
+    <body>
+        <h1>1) Find backup url</h1>
+        <div class="findBackupUrlSection">
+            <p>Open official Lorcana TCG app and find backup url (see screenshots below). Go to link will let you save text file, in which there is the url.</p>
+            <div class="gallery">
+                <figure>
+                    <img src="data/images/home.jpg" />
+                    <figcaption>Home -> 3 dots menu</figcaption>
+                </figure>
+                <figure>
+                    <img src="data/images/settings.jpg" />
+                    <figcaption>Collection backup</figcaption>
+                </figure>
+                <figure>
+                    <img src="data/images/backup.jpg" />
+                    <figcaption>Backup now</figcaption>
+                </figure>
+                <figure>
+                    <img src="data/images/backupLink.jpg" />
+                    <figcaption>Go to the link</figcaption>
+                </figure>
+            </div>
+        </div>
+        
+        <h1>2) Download backup</h1>
+        <div class="downloadBackupSection">
+        Lorcana Backup Url: <input type="text" id="BackupUrlTextbox" placeholder="https://www.disneylorcana.com/en-US/sharing/backup?id=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+        <button onclick="lorcanaUI.setDownloadUrl(lorcanaUI.getBackupUrl());">Generate Url</button></p>
+        
+        <div class="downloadBackupResult">Download this file and provide it in next step: <a href="" id="DownloadUrlResult"></a></div>
+        </div>
+        
+        <h1>3) Export cards</h1>
+        <div class="exportSection">
+            Provide downloaded backup file: <input type="file" id="BackupFileSelector" accept=".json" onchange="(async () => { await LoadPreview() })();"/><br/>
+            
+            <div class="exportSectionResult">
+                Download:
+                <ul>
+                    <li><a href="#" onclick="(async () => { await downloadLorcanaGGCSV() })();">Lorcana.gg</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <h1>4) Preview</h1>
+        <div class="previewSection" id="PreviewSectionResult"></div>
+    </body>
+</html>
