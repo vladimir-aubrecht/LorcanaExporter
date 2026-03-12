@@ -243,8 +243,15 @@
                         const card = cardCollection[i];
 
                         const setCode = String(card.cardInfo.setCode).padStart(3, '0');
-                        const number = String(card.cardInfo.number).padStart(3, '0');
+                        let number = String(card.cardInfo.number);
                         
+                        if (card.cardInfo.variant != null)
+                        {
+                            number += card.cardInfo.variant;        
+                        }
+
+                        number = number.padStart(3, '0');
+
                         output += card.regularCount + ',' + card.foiledCount + ',"' + card.cardInfo.fullName + '",' + '"' + setCode + '",' + '"' + number  + '"\n';
                     }
 
@@ -262,8 +269,13 @@
                         const card = cardCollection[i];
 
                         const setCode = String(card.cardInfo.setCode).padStart(3, '0');
-                        const number = String(card.cardInfo.number).padStart(3, '0');
+                        let number = String(card.cardInfo.number);
                         
+                        if (card.cardInfo.variant != null)
+                        {
+                            number += card.cardInfo.variant;        
+                        }
+
                         if (card.regularCount > 0)
                             output += setCode + ',' + number + ',' + 'normal,' + card.regularCount + ',' + card.cardInfo.fullName + ',' + card.cardInfo.color + ',' + card.cardInfo.rarity + "\n";
 
@@ -284,8 +296,13 @@
                     {
                         const card = cardCollection[i];
 
-                        const setCode = String(card.cardInfo.setCode).padStart(3, '0');
-                        const number = String(card.cardInfo.number).padStart(3, '0');
+                        const setCode = String(card.cardInfo.setCode);
+                        let number = String(card.cardInfo.number);
+
+                        if (card.cardInfo.variant != null)
+                        {
+                            number += card.cardInfo.variant;        
+                        }
                         
                         if (card.regularCount > 0)
                             output += setCode + ',' + number + ',' + 'normal,' + card.regularCount + "\n";
