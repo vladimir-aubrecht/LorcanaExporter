@@ -233,19 +233,14 @@
                 }
             }
 
-            class Exporter
+            class LorcanaGgExporter
             {
-                constructor(cardCollection)
-                {
-                    this.cardCollection = cardCollection;
-                }
-
-                generateLorcanaGgCsv()
+                generate(cardCollection)
                 {
                     let output = "Normal,Foil,Name,Set,Number\n";
-                    for (let i = 0; i < this.cardCollection.length; i++)
+                    for (let i = 0; i < cardCollection.length; i++)
                     {
-                        const card = this.cardCollection[i];
+                        const card = cardCollection[i];
 
                         const setCode = String(card.cardInfo.setCode).padStart(3, '0');
                         const number = String(card.cardInfo.number).padStart(3, '0');
@@ -255,13 +250,16 @@
 
                     return output;
                 }
+            }
 
-                generateDreambornInk()
+            class DreamBornExporter
+            {
+                generate(cardCollection)
                 {
                     let output = "Set Number,Card Number,Variant,Count,Name,Color,Rarity\n";
-                    for (let i = 0; i < this.cardCollection.length; i++)
+                    for (let i = 0; i < cardCollection.length; i++)
                     {
-                        const card = this.cardCollection[i];
+                        const card = cardCollection[i];
 
                         const setCode = String(card.cardInfo.setCode).padStart(3, '0');
                         const number = String(card.cardInfo.number).padStart(3, '0');
@@ -277,6 +275,29 @@
                 }
             }
 
+            class InkloreGgExporter
+            {
+                generate(cardCollection)
+                {
+                    let output = "Set Number,Card Number,Variant,Count\n";
+                    for (let i = 0; i < cardCollection.length; i++)
+                    {
+                        const card = cardCollection[i];
+
+                        const setCode = String(card.cardInfo.setCode).padStart(3, '0');
+                        const number = String(card.cardInfo.number).padStart(3, '0');
+                        
+                        if (card.regularCount > 0)
+                            output += setCode + ',' + number + ',' + 'normal,' + card.regularCount + "\n";
+
+                        if (card.foiledCount > 0)
+                            output += setCode + ',' + number + ',' + 'foil,' + card.foiledCount + "\n";
+                    }
+
+                    return output;
+                }
+            }
+
             async function LoadPreview()
             {
                 const lorcanaCards = new LorcanaCards(await LorcanaCards.loadAllCards());
@@ -285,28 +306,14 @@
                 lorcanaUI.setPreview(backupCards);
             }
 
-            async function downloadLorcanaGGCSV()
+            async function exportCards(filename, exporter)
             {
                 event.preventDefault();
                 
                 const lorcanaCards = new LorcanaCards(await LorcanaCards.loadAllCards());
                 const backupCards = lorcanaCards.getGroupedCollectionInfoByBackup(await lorcanaUI.getBackup());
-                const exporter = new Exporter(backupCards);
-                const output = exporter.generateLorcanaGgCsv();
-                
-                lorcanaUI.triggerFileDownload("lorcana.csv", output);       
-            }
-
-            async function downloadDreamBornInk()
-            {
-                event.preventDefault();
-                
-                const lorcanaCards = new LorcanaCards(await LorcanaCards.loadAllCards());
-                const backupCards = lorcanaCards.getGroupedCollectionInfoByBackup(await lorcanaUI.getBackup());
-                const exporter = new Exporter(backupCards);
-                const output = exporter.generateDreambornInk();
-                
-                lorcanaUI.triggerFileDownload("lorcana.csv", output);       
+                const output = exporter.generate(backupCards);
+                lorcanaUI.triggerFileDownload(filename, output);       
             }
 
             const lorcanaUI = new LorcanaUI();
@@ -352,8 +359,9 @@
             <div class="exportSectionResult">
                 Download:
                 <ul>
-                    <li><a href="#" onclick="(async () => { await downloadLorcanaGGCSV() })();">Lorcana.gg</a></li>
-                    <li><a href="#" onclick="(async () => { await downloadDreamBornInk() })();">DreamBorn.Ink</a></li>
+                    <li><a href="#" onclick="(async () => { await exportCards('LorcanaGg.csv', new LorcanaGgExporter()) })();">Lorcana.gg</a></li>
+                    <li><a href="#" onclick="(async () => { await exportCards('DreamBornInk.csv', new DreamBornExporter()) })();">DreamBorn.Ink</a></li>
+                    <li><a href="#" onclick="(async () => { await exportCards('InkloreGg.csv', new InkloreGgExporter()) })();">Inklore.gg</a></li>
                 </ul>
             </div>
         </div>
