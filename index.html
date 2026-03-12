@@ -105,8 +105,10 @@
                 {
                     const previewSectionResultElement = document.querySelector("#PreviewSectionResult");
                 
-                    previewSectionResultElement.innerHTML = "Found " + cardCollection.length + " cards.";
+                    previewSectionResultElement.innerHTML = "Found " + cardCollection.length + " unique cards.";
 
+                    let uniqueRegular = 0;
+                    let uniqueFoiled = 0;
                     let regular = 0;
                     let foiled = 0;
                     let thumbnails = "";
@@ -116,10 +118,16 @@
                         regular += card.regularCount;
                         foiled += card.foiledCount;
 
+                        if (card.regularCount > 0)
+                            uniqueRegular++;
+
+                        if (card.foiledCount > 0)
+                            uniqueFoiled++;
+
                         thumbnails += "<figure><img src='" + card.cardInfo.images.thumbnail + "' /><figcaption>Regular: "+ card.regularCount + " Foiled: " + card.foiledCount + "</figcaption></figure>";
                     }
                     
-                    previewSectionResultElement.innerHTML += " Regular: " + regular + " Foiled: " + foiled + "<br/><br/>";
+                    previewSectionResultElement.innerHTML += " Unique Regular: " + uniqueRegular + " Unique foiled: " + uniqueFoiled  + " Total cards: " + (regular + foiled) + " Regular: " + regular + " Foiled: " + foiled + "<br/><br/>";
                     previewSectionResultElement.innerHTML += "<div class='gallery'>" + thumbnails + "<div>";
                 }
 
@@ -258,8 +266,11 @@
                         const setCode = String(card.cardInfo.setCode).padStart(3, '0');
                         const number = String(card.cardInfo.number).padStart(3, '0');
                         
-                        output += setCode + ',' + number + ',' + 'normal,' + card.regularCount + ',' + card.cardInfo.fullName + ',' + card.cardInfo.color + ',' + card.cardInfo.rarity + "\n";
-                        output += setCode + ',' + number + ',' + 'foil,' + card.foiledCount + ',' + card.cardInfo.fullName + ',' + card.cardInfo.color + ',' + card.cardInfo.rarity + "\n";
+                        if (card.regularCount > 0)
+                            output += setCode + ',' + number + ',' + 'normal,' + card.regularCount + ',' + card.cardInfo.fullName + ',' + card.cardInfo.color + ',' + card.cardInfo.rarity + "\n";
+
+                        if (card.foiledCount > 0)
+                            output += setCode + ',' + number + ',' + 'foil,' + card.foiledCount + ',' + card.cardInfo.fullName + ',' + card.cardInfo.color + ',' + card.cardInfo.rarity + "\n";
                     }
 
                     return output;
