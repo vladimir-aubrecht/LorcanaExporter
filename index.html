@@ -72,6 +72,168 @@
             }
 
 
+            /* Preview section Statistics */
+
+            .previewStatistics {
+                width: 100%;
+                max-width: 420px;
+                border-collapse: separate;
+                border-spacing: 0;
+                font-family: system-ui, -apple-system, sans-serif;
+                font-size: 15px;
+                color: #e0e0e0;
+                background: #1a1d24;
+                border-radius: 10px;
+                overflow: hidden;
+                box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+            }
+
+            .previewStatistics th,
+            .previewStatistics td {
+                padding: 10px 14px;
+                text-align: right;
+                border-bottom: 1px solid #2c303a;
+            }
+
+            .previewStatistics th {
+                text-align: left;
+                font-weight: 600;
+                background: #212529;
+                color: #a3bffa;
+                text-transform: uppercase;
+                font-size: 0.82em;
+                letter-spacing: 0.4px;
+            }
+
+            .previewStatistics thead th {
+                background: #252b35;
+                color: #c3daff;
+                border-bottom: 2px solid #3b82f6;
+            }
+
+                .previewStatistics tr:last-child td {
+                border-bottom: none;
+            }
+
+            .previewStatistics td:first-child {
+                text-align: left;
+                font-weight: 500;
+                color: #e2e8f0;
+            }
+
+            /* Highlighting */
+            .previewStatistics tr.highlight,
+            .previewStatistics tr:hover {
+                background: #2a3242;
+            }
+
+            /* Better readability for numbers */
+            .previewStatistics td:not(:first-child) {
+                font-variant-numeric: tabular-nums;
+                font-family: "SF Mono", "Roboto Mono", Consolas, monospace;
+            }
+
+            /* Foiled column is orange */
+            .previewStatistics th:nth-child(3),
+            .previewStatistics td:nth-child(3) {
+                color: #f6ad55;
+                font-weight: 550;
+            }
+
+
+            /* Preview Section Foiled cards */
+            .card-wrapper{
+                position:relative;
+                aspect-ratio:715/1000;
+                border-radius:14px;
+                overflow:hidden;
+                }
+
+            /* base */
+            .card-base{
+                position:absolute;
+                inset:0;
+                width:100%;
+                height:100%;
+                object-fit:cover;
+                }
+
+            /* foil gradient */
+            .foil-layer{
+                position:absolute;
+                inset:0;
+
+                background:
+                    linear-gradient(
+                    var(--foil-angle,120deg),
+                    #ff7ad9,
+                    #ffe66b,
+                    #6effe8,
+                    #7aa2ff,
+                    #ff7ad9
+                    );
+
+                background-size:300% 300%;
+                mix-blend-mode:color-dodge;
+                opacity:0.35;
+                animation: foilMove var(--foil-speed,8s) linear infinite;
+                animation-delay: var(--foil-delay,0s);
+            }
+
+            /* mask */
+            .foil-mask{
+                position:absolute;
+                inset:0;
+                width:100%;
+                height:100%;
+                object-fit:cover;
+
+                mix-blend-mode:multiply;
+            }
+
+            /* jemný highlight */
+            .card-wrapper::after{
+                content:"";
+                position:absolute;
+                inset:-150%;
+
+                background:linear-gradient(
+                    120deg,
+                    transparent 48%,
+                    rgba(255,255,255,0.35) 50%,
+                    transparent 52%
+                );
+
+                mix-blend-mode:screen;
+
+                opacity:.5;
+
+                animation: shine var(--shine-speed,9s) linear infinite;
+
+                animation-delay: var(--shine-delay,0s);
+            }
+
+            @keyframes foilMove{
+                0%{background-position:0% 50%;}
+                100%{background-position:100% 50%;}
+            }
+
+            @keyframes shine{
+                0%{transform:translate(-200px,-200px)}
+                100%{transform:translate(200px,200px)}
+            }
+
+            .card-wrapper::before{
+                content:"";
+                position:absolute;
+                inset:0;
+
+                background-image:url(/foil-noise.png);
+
+                opacity:0.12;
+
+                mix-blend-mode:overlay;
+            }
         </style>
         <script lang="javascript">
 
@@ -99,6 +261,66 @@
                         return null;
 
                     return JSON.parse(await backupFile.text());
+                }
+
+                setPreview2(cardCollection)
+                {
+                    const previewSectionResultElement = document.querySelector("#PreviewSectionResult");
+
+                    let regularFigures = "";
+                    let foiledFigures = "";
+                    let statistics = {
+                        TotalCards: 0,
+                        TotalUniqueCards: 0,
+                        RegularCards: 0,
+                        RegularUniqueCards: 0,
+                        FoiledCards: 0,
+                        FoiledUniqueCards: 0
+                    };
+
+                    for (let i = 0; i < cardCollection.length; i++)
+                    {
+                        const card = cardCollection[i];
+
+                        if (card.regularCount > 0)
+                        {
+                            const template = "<figure><img src='" + card.cardInfo.images.thumbnail + "' /><figcaption>Count: "+ card.regularCount + "</figcaption></figure>";
+                            regularFigures += template;
+
+                            statistics.RegularCards += card.regularCount;
+                            statistics.RegularUniqueCards++;
+                            statistics.TotalUniqueCards++;
+                            statistics.TotalCards += card.regularCount;
+                        }
+
+                        if (card.foiledCount > 0)
+                        {
+                            let template = "<figure>";
+                                template += "<div class='card-wrapper'>"
+                                template += "<img class='card-base' src='" + card.cardInfo.images.full + "' />";
+                                template += "<div class='foil-layer'>";
+                                template += "<img class='foil-mask' src='" + card.cardInfo.images.foilMask + "' />";
+                                template += "</div>";
+                                template += "</div>";
+                                template += "<figcaption>Count: "+ card.foiledCount + "</figcaption>";
+                                template += "</figure>";
+                            foiledFigures += template;
+
+                            statistics.FoiledCards += card.foiledCount;
+                            statistics.FoiledUniqueCards++;
+                            statistics.TotalUniqueCards++;
+                            statistics.TotalCards += card.foiledCount;
+                        }
+                    }
+
+                    let statisticsTemplate = "<table class='previewStatistics'>";
+                        statisticsTemplate += "<tr><th></th><th>Regular</th><th>Foiled</th><th>Total</th></tr>";
+                        statisticsTemplate += "<tr><th>Unique cards</th><td>" + statistics.RegularUniqueCards + "</td><td>" + statistics.FoiledUniqueCards + "</td><td>" + statistics.TotalUniqueCards + "</td></tr>";
+                        statisticsTemplate += "<tr><th>All cards</th><td>" + statistics.RegularCards + "</td><td>" + statistics.FoiledCards + "</td><td>" + statistics.TotalCards + "</td></tr>";
+                        statisticsTemplate += "</table>";
+
+                    let previewTemplate = "<h2>Statistics</h2><div>" + statisticsTemplate + "</div><h2>Regular cards</h2><div class='gallery'>" + regularFigures + "</div><h2>Foiled cards</h2><div class='gallery'>" + foiledFigures + "</div>";
+                    previewSectionResultElement.innerHTML = previewTemplate;
                 }
 
                 setPreview(cardCollection)
@@ -189,6 +411,13 @@
                         const card = backup.OwnedCardQuantitiesV2[i];
 
                         const cardInfo = this.getCardInfo(card.Id);
+
+                        // If there is no regular alternative, than it's foiled version
+                        if (card.Type == 'Regular' && cardInfo.foilTypes.length == 1 && cardInfo.foilTypes[0] != 'None')
+                        {
+                            card.Type = 'Foiled';
+                        }
+
                         outputCards.push({id: card.Id, quantity: card.Quantity, type: card.Type, cardInfo: cardInfo});
                     }
 
@@ -320,7 +549,7 @@
                 const lorcanaCards = new LorcanaCards(await LorcanaCards.loadAllCards());
                 const backupCards = lorcanaCards.getGroupedCollectionInfoByBackup(await lorcanaUI.getBackup());
                 
-                lorcanaUI.setPreview(backupCards);
+                lorcanaUI.setPreview2(backupCards);
             }
 
             async function exportCards(filename, exporter)
