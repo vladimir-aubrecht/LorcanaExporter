@@ -140,101 +140,8 @@
                 font-weight: 550;
             }
 
-
-            /* Preview Section Foiled cards */
-            .card-wrapper{
-                position:relative;
-                aspect-ratio:715/1000;
-                border-radius:14px;
-                overflow:hidden;
-                }
-
-            /* base */
-            .card-base{
-                position:absolute;
-                inset:0;
-                width:100%;
-                height:100%;
-                object-fit:cover;
-                }
-
-            /* foil gradient */
-            .foil-layer{
-                position:absolute;
-                inset:0;
-
-                background:
-                    linear-gradient(
-                    var(--foil-angle,120deg),
-                    #ff7ad9,
-                    #ffe66b,
-                    #6effe8,
-                    #7aa2ff,
-                    #ff7ad9
-                    );
-
-                background-size:300% 300%;
-                mix-blend-mode:color-dodge;
-                opacity:0.35;
-                animation: foilMove var(--foil-speed,8s) linear infinite;
-                animation-delay: var(--foil-delay,0s);
-            }
-
-            /* mask */
-            .foil-mask{
-                position:absolute;
-                inset:0;
-                width:100%;
-                height:100%;
-                object-fit:cover;
-
-                mix-blend-mode:multiply;
-            }
-
-            /* jemný highlight */
-            .card-wrapper::after{
-                content:"";
-                position:absolute;
-                inset:-150%;
-
-                background:linear-gradient(
-                    120deg,
-                    transparent 48%,
-                    rgba(255,255,255,0.35) 50%,
-                    transparent 52%
-                );
-
-                mix-blend-mode:screen;
-
-                opacity:.5;
-
-                animation: shine var(--shine-speed,9s) linear infinite;
-
-                animation-delay: var(--shine-delay,0s);
-            }
-
-            @keyframes foilMove{
-                0%{background-position:0% 50%;}
-                100%{background-position:100% 50%;}
-            }
-
-            @keyframes shine{
-                0%{transform:translate(-200px,-200px)}
-                100%{transform:translate(200px,200px)}
-            }
-
-            .card-wrapper::before{
-                content:"";
-                position:absolute;
-                inset:0;
-
-                background-image:url(/foil-noise.png);
-
-                opacity:0.12;
-
-                mix-blend-mode:overlay;
-            }
         </style>
+        
         <script lang="javascript">
 
             class LorcanaUI
@@ -296,12 +203,7 @@
                         if (card.foiledCount > 0)
                         {
                             let template = "<figure>";
-                                template += "<div class='card-wrapper'>"
-                                template += "<img class='card-base' src='" + card.cardInfo.images.full + "' />";
-                                template += "<div class='foil-layer'>";
-                                template += "<img class='foil-mask' src='" + card.cardInfo.images.foilMask + "' />";
-                                template += "</div>";
-                                template += "</div>";
+                                template += "<img src='" + card.cardInfo.images.full + "' />";
                                 template += "<figcaption>Count: "+ card.foiledCount + "</figcaption>";
                                 template += "</figure>";
                             foiledFigures += template;
@@ -563,6 +465,7 @@
             }
 
             const lorcanaUI = new LorcanaUI();
+</script>
         </script>
     </head>
 
