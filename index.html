@@ -54,10 +54,10 @@
                 margin-top: 1rem;
             }
 
-            body:has(.previewSection:not(:empty)) .exportSectionResult {
+/*            body:has(.previewSection:not(:empty)) .exportSectionResult {
                 display: block;
             }
-
+*/
 
             /* Preview section*/
 
@@ -223,36 +223,15 @@
 
                     let previewTemplate = "<h2>Statistics</h2><div>" + statisticsTemplate + "</div><h2>Regular cards</h2><div class='gallery'>" + regularFigures + "</div><h2>Foiled cards</h2><div class='gallery'>" + foiledFigures + "</div>";
                     previewSectionResultElement.innerHTML = previewTemplate;
-                }
 
-                setPreview(cardCollection)
-                {
-                    const previewSectionResultElement = document.querySelector("#PreviewSectionResult");
-                
-                    previewSectionResultElement.innerHTML = "Found " + cardCollection.length + " unique cards.";
-
-                    let uniqueRegular = 0;
-                    let uniqueFoiled = 0;
-                    let regular = 0;
-                    let foiled = 0;
-                    let thumbnails = "";
-                    for (let i = 0; i < cardCollection.length; i++)
+                    if (statistics.TotalCards > 0)
                     {
-                        const card = cardCollection[i];
-                        regular += card.regularCount;
-                        foiled += card.foiledCount;
-
-                        if (card.regularCount > 0)
-                            uniqueRegular++;
-
-                        if (card.foiledCount > 0)
-                            uniqueFoiled++;
-
-                        thumbnails += "<figure><img src='" + card.cardInfo.images.thumbnail + "' /><figcaption>Regular: "+ card.regularCount + " Foiled: " + card.foiledCount + "</figcaption></figure>";
+                        document.querySelector(".exportSectionResult").style.display = "block";
                     }
-                    
-                    previewSectionResultElement.innerHTML += " Unique Regular: " + uniqueRegular + " Unique foiled: " + uniqueFoiled  + " Total cards: " + (regular + foiled) + " Regular: " + regular + " Foiled: " + foiled + "<br/><br/>";
-                    previewSectionResultElement.innerHTML += "<div class='gallery'>" + thumbnails + "<div>";
+                    else
+                    {
+                        document.querySelector(".exportSectionResult").style.display = "none";
+                    }
                 }
 
                 triggerFileDownload(filename, content, mimeTyp = "text/plain")
