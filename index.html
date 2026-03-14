@@ -482,7 +482,7 @@
                 }
             }
 
-            async function LoadPreview()
+            async function loadPreview()
             {
                 const lorcanaCards = new LorcanaCards(await LorcanaCards.loadAllCards());
                 const backupCards = lorcanaCards.getGroupedCollectionInfoByBackup(await lorcanaUI.getBackup());
@@ -500,6 +500,17 @@
                 lorcanaUI.triggerFileDownload(filename, output);       
             }
 
+            const maxCardTiltDeg = 22;
+            const tiltResponseExponent = 0.6;
+
+            function applyTiltResponseCurve(value)
+            {
+                const sign = Math.sign(value);
+                const magnitude = Math.abs(value) * 2;
+                const curvedMagnitude = Math.pow(magnitude, tiltResponseExponent) / 2;
+                return curvedMagnitude * sign;
+            }
+
             function initCardEffects()
             {
                 const cardSurfaces = document.querySelectorAll("#PreviewSectionResult .gallery figure > div");
@@ -514,6 +525,57 @@
                     surface.dataset.pointerY = "50";
                     surface.dataset.hover = "0";
                     surface._foilMaskReady = false;
+
+                    let targetPointerX = 50;
+                    let targetPointerY = 50;
+                    let currentPointerX = 50;
+                    let currentPointerY = 50;
+                    let tiltAnimationFrame = null;
+
+                    const applyTilt = () => {
+                        const normalizedX = currentPointerX / 100;
+                        const normalizedY = currentPointerY / 100;
+                        const tiltX = applyTiltResponseCurve(normalizedX - 0.5);
+                        const tiltY = applyTiltResponseCurve(0.5 - normalizedY);
+                        const rotateY = tiltX * maxCardTiltDeg;
+                        const rotateX = tiltY * maxCardTiltDeg;
+
+                        surface.dataset.pointerX = String(currentPointerX);
+                        surface.dataset.pointerY = String(currentPointerY);
+                        surface.style.setProperty("--pointer-x", currentPointerX + "%");
+                        surface.style.setProperty("--pointer-y", currentPointerY + "%");
+                        surface.style.setProperty("--rot-x", rotateX + "deg");
+                        surface.style.setProperty("--rot-y", rotateY + "deg");
+
+                        if (isFoilSurface)
+                            renderFoilCanvas(surface, false);
+                    };
+
+                    const animateTilt = () => {
+                        const smoothing = 0.24;
+                        currentPointerX += (targetPointerX - currentPointerX) * smoothing;
+                        currentPointerY += (targetPointerY - currentPointerY) * smoothing;
+
+                        applyTilt();
+
+                        const deltaX = Math.abs(targetPointerX - currentPointerX);
+                        const deltaY = Math.abs(targetPointerY - currentPointerY);
+                        if (deltaX > 0.03 || deltaY > 0.03)
+                        {
+                            tiltAnimationFrame = requestAnimationFrame(animateTilt);
+                            return;
+                        }
+
+                        currentPointerX = targetPointerX;
+                        currentPointerY = targetPointerY;
+                        applyTilt();
+                        tiltAnimationFrame = null;
+                    };
+
+                    const ensureTiltAnimation = () => {
+                        if (tiltAnimationFrame == null)
+                            tiltAnimationFrame = requestAnimationFrame(animateTilt);
+                    };
 
                     if (isFoilSurface && foilMask)
                     {
@@ -538,23 +600,12 @@
                         const bounds = surface.getBoundingClientRect();
                         const x = Math.min(Math.max(event.clientX - bounds.left, 0), bounds.width);
                         const y = Math.min(Math.max(event.clientY - bounds.top, 0), bounds.height);
-                        const normalizedX = x / bounds.width;
-                        const normalizedY = y / bounds.height;
+                        const normalizedX = bounds.width > 0 ? x / bounds.width : 0.5;
+                        const normalizedY = bounds.height > 0 ? y / bounds.height : 0.5;
 
-                        const pointerX = Math.round(normalizedX * 100);
-                        const pointerY = Math.round(normalizedY * 100);
-                        const rotateY = ((normalizedX - 0.5) * 16).toFixed(2);
-                        const rotateX = ((0.5 - normalizedY) * 16).toFixed(2);
-
-                        surface.dataset.pointerX = String(pointerX);
-                        surface.dataset.pointerY = String(pointerY);
-                        surface.style.setProperty("--pointer-x", pointerX + "%");
-                        surface.style.setProperty("--pointer-y", pointerY + "%");
-                        surface.style.setProperty("--rot-x", rotateX + "deg");
-                        surface.style.setProperty("--rot-y", rotateY + "deg");
-
-                        if (isFoilSurface)
-                            renderFoilCanvas(surface, false);
+                        targetPointerX = normalizedX * 100;
+                        targetPointerY = normalizedY * 100;
+                        ensureTiltAnimation();
                     };
 
                     const onEnter = () => {
@@ -565,15 +616,9 @@
 
                     const onLeave = () => {
                         surface.dataset.hover = "0";
-                        surface.dataset.pointerX = "50";
-                        surface.dataset.pointerY = "50";
-                        surface.style.setProperty("--pointer-x", "50%");
-                        surface.style.setProperty("--pointer-y", "50%");
-                        surface.style.setProperty("--rot-x", "0deg");
-                        surface.style.setProperty("--rot-y", "0deg");
-
-                        if (isFoilSurface)
-                            renderFoilCanvas(surface, true);
+                        targetPointerX = 50;
+                        targetPointerY = 50;
+                        ensureTiltAnimation();
                     };
 
                     surface.addEventListener("mousemove", onMove);
@@ -789,7 +834,7 @@
         
         <h1>3) Export cards</h1>
         <div class="exportSection">
-            Provide downloaded backup file: <input type="file" id="BackupFileSelector" accept=".json" onchange="(async () => { await LoadPreview() })();"/><br/>
+            Provide downloaded backup file: <input type="file" id="BackupFileSelector" accept=".json" onchange="(async () => { await loadPreview() })();"/><br/>
             
             <div class="exportSectionResult">
                 Download:
