@@ -92,11 +92,6 @@
             .previewSection .foilCardSurface {
                 isolation: isolate;
                 background: #101419;
-                --foil-mask-image: none;
-            }
-
-            .previewSection .foilCardSurface[data-has-mask="0"] .foilMaskMap {
-                display: none;
             }
 
             .previewSection .cardImage {
@@ -116,9 +111,7 @@
                 height: 100%;
                 object-fit: cover;
                 pointer-events: none;
-                mix-blend-mode: screen;
-                opacity: 0;
-                filter: brightness(1.15) contrast(1.25);
+                display: none;
             }
 
             .previewSection .foilCanvas {
@@ -129,113 +122,6 @@
                 pointer-events: none;
                 mix-blend-mode: screen;
                 opacity: 0.9;
-            }
-
-            .previewSection .foilLayer {
-                position: absolute;
-                inset: 0;
-                pointer-events: none;
-                border-radius: 8px;
-            }
-
-            .previewSection .foilMaskLayer {
-                background:
-                    linear-gradient(120deg,
-                        rgba(255, 255, 255, 0.32) 0%,
-                        rgba(213, 230, 255, 0.28) 35%,
-                        rgba(255, 255, 255, 0.34) 70%,
-                        rgba(218, 236, 255, 0.28) 100%);
-                background-size: 240% 240%;
-                mix-blend-mode: soft-light;
-                opacity: 0;
-                -webkit-mask-image: var(--foil-mask-image);
-                -webkit-mask-size: cover;
-                -webkit-mask-position: center;
-                mask-image: var(--foil-mask-image);
-                mask-size: cover;
-                mask-position: center;
-                animation: foilHueShift 5.8s linear infinite;
-            }
-
-            .previewSection .foilPrismLayer {
-                background: conic-gradient(
-                    from 0deg at var(--pointer-x) var(--pointer-y),
-                    rgba(236, 244, 255, 0.20),
-                    rgba(209, 226, 255, 0.18),
-                    rgba(238, 246, 255, 0.20),
-                    rgba(214, 231, 255, 0.18),
-                    rgba(236, 244, 255, 0.20)
-                );
-                mix-blend-mode: soft-light;
-                opacity: 0;
-                -webkit-mask-image: var(--foil-mask-image);
-                -webkit-mask-size: cover;
-                -webkit-mask-position: center;
-                mask-image: var(--foil-mask-image);
-                mask-size: cover;
-                mask-position: center;
-                animation: foilHueShift 6.8s linear infinite reverse;
-            }
-
-            .previewSection .foilGlareLayer {
-                background:
-                    radial-gradient(circle at var(--pointer-x) var(--pointer-y),
-                        rgba(255, 255, 255, 0.9) 0%,
-                        rgba(255, 255, 255, 0.42) 10%,
-                        rgba(255, 255, 255, 0.0) 42%);
-                mix-blend-mode: screen;
-                opacity: 0;
-                -webkit-mask-image: var(--foil-mask-image);
-                -webkit-mask-size: cover;
-                -webkit-mask-position: center;
-                mask-image: var(--foil-mask-image);
-                mask-size: cover;
-                mask-position: center;
-            }
-
-            .previewSection .foilSparkleLayer {
-                background:
-                    repeating-linear-gradient(
-                        -28deg,
-                        rgba(255, 255, 255, 0.24) 0px,
-                        rgba(255, 255, 255, 0.24) 1px,
-                        rgba(255, 255, 255, 0.0) 1px,
-                        rgba(255, 255, 255, 0.0) 6px
-                    ),
-                    repeating-linear-gradient(
-                        28deg,
-                        rgba(220, 232, 255, 0.18) 0px,
-                        rgba(220, 232, 255, 0.18) 1px,
-                        rgba(255, 255, 255, 0.0) 1px,
-                        rgba(255, 255, 255, 0.0) 8px
-                    );
-                mix-blend-mode: soft-light;
-                opacity: 0;
-                -webkit-mask-image: var(--foil-mask-image);
-                -webkit-mask-size: cover;
-                -webkit-mask-position: center;
-                mask-image: var(--foil-mask-image);
-                mask-size: cover;
-                mask-position: center;
-                animation: foilSparkleShift 4.2s linear infinite;
-            }
-
-            @keyframes foilHueShift {
-                0% {
-                    background-position: 0% 50%;
-                }
-                100% {
-                    background-position: 200% 50%;
-                }
-            }
-
-            @keyframes foilSparkleShift {
-                0% {
-                    transform: translateX(-8%);
-                }
-                100% {
-                    transform: translateX(8%);
-                }
             }
 
 
@@ -377,10 +263,6 @@
                                 template += "<img class='cardImage foilCardImage' src='" + card.cardInfo.images.full + "' />";
                                 template += "<canvas class='foilCanvas'></canvas>";
                                 template += "<img class='foilMaskMap' alt='' />";
-                                template += "<span class='foilLayer foilMaskLayer'></span>";
-                                template += "<span class='foilLayer foilPrismLayer'></span>";
-                                template += "<span class='foilLayer foilGlareLayer'></span>";
-                                template += "<span class='foilLayer foilSparkleLayer'></span>";
                                 template += "</div>";
                                 template += "<figcaption>Count: "+ card.foiledCount + "</figcaption>";
                                 template += "</figure>";
@@ -627,31 +509,29 @@
                 const cardSurfaces = document.querySelectorAll(".cardSurface");
 
                 cardSurfaces.forEach(surface => {
-                    if (surface.dataset.foilBound == "1")
+                    if (surface.dataset.cardFxBound == "1")
                         return;
 
                     const isFoilSurface = surface.classList.contains("foilCardSurface");
                     const foilMask = surface.dataset.foilMask;
-                    surface.dataset.hasMask = "0";
                     surface.dataset.pointerX = "50";
                     surface.dataset.pointerY = "50";
                     surface.dataset.hover = "0";
+                    surface._foilMaskReady = false;
 
                     if (isFoilSurface && foilMask)
                     {
-                        surface.style.setProperty("--foil-mask-image", "url('" + foilMask + "')");
-
                         const maskMapLayer = surface.querySelector(".foilMaskMap");
                         if (maskMapLayer)
                         {
                             maskMapLayer.src = foilMask;
                             maskMapLayer.addEventListener("load", () => {
-                                surface.dataset.hasMask = "1";
+                                surface._foilMaskReady = true;
                                 surface._foilMaskAlphaCanvas = null;
                                 renderFoilCanvas(surface, true);
                             }, { once: true });
                             maskMapLayer.addEventListener("error", () => {
-                                surface.dataset.hasMask = "0";
+                                surface._foilMaskReady = false;
                                 surface._foilMaskAlphaCanvas = null;
                                 renderFoilCanvas(surface, true);
                             }, { once: true });
@@ -716,7 +596,7 @@
                     if (isFoilSurface)
                         renderFoilCanvas(surface, true);
 
-                    surface.dataset.foilBound = "1";
+                    surface.dataset.cardFxBound = "1";
                 });
             }
 
@@ -813,7 +693,7 @@
                 ctx.fillStyle = glare;
                 ctx.fillRect(0, 0, width, height);
 
-                const hasMask = surface.dataset.hasMask == "1";
+                const hasMask = surface._foilMaskReady;
                 if (hasMask && maskMapLayer && maskMapLayer.complete)
                 {
                     const maskAlphaCanvas = getOrCreateFoilMaskAlphaCanvas(surface, maskMapLayer, width, height);
