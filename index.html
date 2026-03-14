@@ -245,7 +245,6 @@
 
                             statistics.RegularCards += card.regularCount;
                             statistics.RegularUniqueCards++;
-                            statistics.TotalUniqueCards++;
                             statistics.TotalCards += card.regularCount;
                         }
 
@@ -266,15 +265,16 @@
 
                             statistics.FoiledCards += card.foiledCount;
                             statistics.FoiledUniqueCards++;
-                            statistics.TotalUniqueCards++;
                             statistics.TotalCards += card.foiledCount;
                         }
+
+                        statistics.TotalUniqueCards++;  // foiled and regular are still having same IDs, they are single card...
                     }
 
                     let statisticsTemplate = "<table class='previewStatistics'>";
-                        statisticsTemplate += "<tr><th></th><th>Regular</th><th>Foiled</th><th>Total</th></tr>";
-                        statisticsTemplate += "<tr><th>Unique cards</th><td>" + statistics.RegularUniqueCards + "</td><td>" + statistics.FoiledUniqueCards + "</td><td>" + statistics.TotalUniqueCards + "</td></tr>";
-                        statisticsTemplate += "<tr><th>All cards</th><td>" + statistics.RegularCards + "</td><td>" + statistics.FoiledCards + "</td><td>" + statistics.TotalCards + "</td></tr>";
+                        statisticsTemplate += "<tr><th></th><th>Regular</th><th>Foiled</th><th>Total</th><th>Sum</th></tr>";
+                        statisticsTemplate += "<tr><th>Unique cards</th><td>" + statistics.RegularUniqueCards + "</td><td>" + statistics.FoiledUniqueCards + "</td><td>" + statistics.TotalUniqueCards + "</td><td>" + (statistics.RegularUniqueCards + statistics.FoiledUniqueCards) + "</td></tr>";
+                        statisticsTemplate += "<tr><th>All cards</th><td>" + statistics.RegularCards + "</td><td>" + statistics.FoiledCards + "</td><td>" + statistics.TotalCards + "</td><td>" + (statistics.RegularCards + statistics.FoiledCards) + "</td></tr>";
                         statisticsTemplate += "</table>";
 
                     let previewTemplate = "<h2>Statistics</h2><div>" + statisticsTemplate + "</div><h2>Regular cards</h2><div class='gallery'>" + regularFigures + "</div><h2>Foiled cards</h2><div class='gallery'>" + foiledFigures + "</div>";
@@ -419,7 +419,8 @@
 
                         number = number.padStart(3, '0');
 
-                        output += card.regularCount + ',' + card.foiledCount + ',"' + card.cardInfo.fullName + '",' + '"' + setCode + '",' + '"' + number  + '"\n';
+                        if (card.foiledCount > 0 || card.regularCount > 0)
+                            output += card.regularCount + ',' + card.foiledCount + ',"' + card.cardInfo.fullName + '",' + '"' + setCode + '",' + '"' + number  + '"\n';
                     }
 
                     return output;
