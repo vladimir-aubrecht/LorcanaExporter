@@ -72,7 +72,7 @@
                 perspective: 900px;
             }
 
-            .previewSection .cardSurface {
+            .previewSection .gallery figure > div {
                 position: relative;
                 width: 100%;
                 border-radius: 8px;
@@ -85,26 +85,22 @@
                 --pointer-y: 50%;
             }
 
-            .previewSection .cardSurface:hover {
+            .previewSection .gallery figure > div:hover {
                 box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
             }
 
-            .previewSection .foilCardSurface {
+            .previewSection .gallery figure > div[data-foil-mask] {
                 isolation: isolate;
                 background: #101419;
             }
 
-            .previewSection .cardImage {
+            .previewSection .gallery figure > div > img:first-of-type {
                 display: block;
                 width: 100%;
                 height: auto;
             }
 
-            .previewSection .foilCardImage {
-                display: block;
-            }
-
-            .previewSection .foilMaskMap {
+            .previewSection .gallery figure > div > img[data-foil-mask-map] {
                 position: absolute;
                 inset: 0;
                 width: 100%;
@@ -114,7 +110,7 @@
                 display: none;
             }
 
-            .previewSection .foilCanvas {
+            .previewSection .gallery figure > div > canvas[data-foil-canvas] {
                 position: absolute;
                 inset: 0;
                 width: 100%;
@@ -244,7 +240,7 @@
 
                         if (card.regularCount > 0)
                         {
-                            const template = "<figure><div class='cardSurface'><img class='cardImage' src='" + card.cardInfo.images.thumbnail + "' /></div><figcaption>Count: "+ card.regularCount + "</figcaption></figure>";
+                            const template = "<figure><div><img src='" + card.cardInfo.images.thumbnail + "' /></div><figcaption>Count: "+ card.regularCount + "</figcaption></figure>";
                             regularFigures += template;
 
                             statistics.RegularCards += card.regularCount;
@@ -258,11 +254,11 @@
                             const foilMask = card.cardInfo.images.foilMask ?? "";
                             const escapedFoilMask = foilMask.replaceAll("'", "%27");
 
-                            let template = "<figure class='foilCard'>";
-                                template += "<div class='cardSurface foilCardSurface' data-foil-mask='" + escapedFoilMask + "'>";
-                                template += "<img class='cardImage foilCardImage' src='" + card.cardInfo.images.full + "' />";
-                                template += "<canvas class='foilCanvas'></canvas>";
-                                template += "<img class='foilMaskMap' alt='' />";
+                            let template = "<figure>";
+                                template += "<div data-foil-mask='" + escapedFoilMask + "'>";
+                                template += "<img src='" + card.cardInfo.images.full + "' />";
+                                template += "<canvas data-foil-canvas></canvas>";
+                                template += "<img data-foil-mask-map alt='' />";
                                 template += "</div>";
                                 template += "<figcaption>Count: "+ card.foiledCount + "</figcaption>";
                                 template += "</figure>";
@@ -506,13 +502,13 @@
 
             function initCardEffects()
             {
-                const cardSurfaces = document.querySelectorAll(".cardSurface");
+                const cardSurfaces = document.querySelectorAll("#PreviewSectionResult .gallery figure > div");
 
                 cardSurfaces.forEach(surface => {
                     if (surface.dataset.cardFxBound == "1")
                         return;
 
-                    const isFoilSurface = surface.classList.contains("foilCardSurface");
+                    const isFoilSurface = surface.dataset.foilMask != null;
                     const foilMask = surface.dataset.foilMask;
                     surface.dataset.pointerX = "50";
                     surface.dataset.pointerY = "50";
@@ -521,7 +517,7 @@
 
                     if (isFoilSurface && foilMask)
                     {
-                        const maskMapLayer = surface.querySelector(".foilMaskMap");
+                        const maskMapLayer = surface.querySelector("img[data-foil-mask-map]");
                         if (maskMapLayer)
                         {
                             maskMapLayer.src = foilMask;
@@ -584,7 +580,7 @@
                     surface.addEventListener("mouseenter", onEnter);
                     surface.addEventListener("mouseleave", onLeave);
 
-                    const cardImage = surface.querySelector(".cardImage");
+                    const cardImage = surface.querySelector("img:not([data-foil-mask-map])");
                     if (cardImage)
                     {
                         cardImage.addEventListener("load", () => {
@@ -602,9 +598,9 @@
 
             function renderFoilCanvas(surface, forceRender)
             {
-                const canvas = surface.querySelector(".foilCanvas");
-                const image = surface.querySelector(".foilCardImage");
-                const maskMapLayer = surface.querySelector(".foilMaskMap");
+                const canvas = surface.querySelector("canvas[data-foil-canvas]");
+                const image = surface.querySelector("img:not([data-foil-mask-map])");
+                const maskMapLayer = surface.querySelector("img[data-foil-mask-map]");
 
                 if (!forceRender && surface._foilRenderFramePending)
                     return;
