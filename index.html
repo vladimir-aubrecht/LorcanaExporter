@@ -54,25 +54,20 @@
                 margin-top: 1rem;
             }
 
-/*            body:has(.previewSection:not(:empty)) .exportSectionResult {
-                display: block;
-            }
-*/
-
             /* Preview section*/
 
-            .previewSection img {
-                width: 150px;
+            .previewSection {
+                display: none;
             }
 
-            .previewSection figure {
-                width: 150px;
+            .previewSectionResult figure {
+                width: 120px;
                 text-align: center;
                 margin: 0 0 0 0;
                 perspective: 900px;
             }
 
-            .previewSection .gallery figure > div {
+            .previewSectionResult .gallery figure > div {
                 position: relative;
                 width: 100%;
                 border-radius: 8px;
@@ -85,22 +80,22 @@
                 --pointer-y: 50%;
             }
 
-            .previewSection .gallery figure > div:hover {
+            .previewSectionResult .gallery figure > div:hover {
                 box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
             }
 
-            .previewSection .gallery figure > div[data-foil-mask] {
+            .previewSectionResult .gallery figure > div[data-foil-mask] {
                 isolation: isolate;
                 background: #101419;
             }
 
-            .previewSection .gallery figure > div > img:first-of-type {
+            .previewSectionResult .gallery figure > div > img:first-of-type {
                 display: block;
                 width: 100%;
                 height: auto;
             }
 
-            .previewSection .gallery figure > div > img[data-foil-mask-map] {
+            .previewSectionResult .gallery figure > div > img[data-foil-mask-map] {
                 position: absolute;
                 inset: 0;
                 width: 100%;
@@ -110,7 +105,7 @@
                 display: none;
             }
 
-            .previewSection .gallery figure > div > canvas[data-foil-canvas] {
+            .previewSectionResult .gallery figure > div > canvas[data-foil-canvas] {
                 position: absolute;
                 inset: 0;
                 width: 100%;
@@ -219,12 +214,11 @@
                     return JSON.parse(await backupFile.text());
                 }
 
-                setPreview2(cardCollection)
+                generateFigures(cardCollection)
                 {
-                    const previewSectionResultElement = document.querySelector("#PreviewSectionResult");
-
                     let regularFigures = "";
                     let foiledFigures = "";
+
                     let statistics = {
                         TotalCards: 0,
                         TotalUniqueCards: 0,
@@ -240,7 +234,7 @@
 
                         if (card.regularCount > 0)
                         {
-                            const template = "<figure><div><img src='" + card.cardInfo.images.thumbnail + "' /></div><figcaption>Count: "+ card.regularCount + "</figcaption></figure>";
+                            const template = "<figure><div><img src='" + card.cardInfo.images.thumbnail + "' /></div><figcaption>Count: " + card.regularCount + "</figcaption></figure>";
                             regularFigures += template;
 
                             statistics.RegularCards += card.regularCount;
@@ -254,13 +248,13 @@
                             const escapedFoilMask = foilMask.replaceAll("'", "%27");
 
                             let template = "<figure>";
-                                template += "<div data-foil-mask='" + escapedFoilMask + "'>";
-                                template += "<img src='" + card.cardInfo.images.full + "' />";
-                                template += "<canvas data-foil-canvas></canvas>";
-                                template += "<img data-foil-mask-map alt='' />";
-                                template += "</div>";
-                                template += "<figcaption>Count: "+ card.foiledCount + "</figcaption>";
-                                template += "</figure>";
+                            template += "<div data-foil-mask='" + escapedFoilMask + "'>";
+                            template += "<img src='" + card.cardInfo.images.full + "' />";
+                            template += "<canvas data-foil-canvas></canvas>";
+                            template += "<img data-foil-mask-map alt='' />";
+                            template += "</div>";
+                            template += "<figcaption>Count: " + card.foiledCount + "</figcaption>";
+                            template += "</figure>";
                             foiledFigures += template;
 
                             statistics.FoiledCards += card.foiledCount;
@@ -271,23 +265,65 @@
                         statistics.TotalUniqueCards++;  // foiled and regular are still having same IDs, they are single card...
                     }
 
-                    let statisticsTemplate = "<table class='previewStatistics'>";
-                        statisticsTemplate += "<tr><th></th><th>Regular</th><th>Foiled</th><th>Total</th><th>Sum</th></tr>";
-                        statisticsTemplate += "<tr><th>Unique cards</th><td>" + statistics.RegularUniqueCards + "</td><td>" + statistics.FoiledUniqueCards + "</td><td>" + statistics.TotalUniqueCards + "</td><td>" + (statistics.RegularUniqueCards + statistics.FoiledUniqueCards) + "</td></tr>";
-                        statisticsTemplate += "<tr><th>All cards</th><td>" + statistics.RegularCards + "</td><td>" + statistics.FoiledCards + "</td><td>" + statistics.TotalCards + "</td><td>" + (statistics.RegularCards + statistics.FoiledCards) + "</td></tr>";
-                        statisticsTemplate += "</table>";
+                    return { regular: regularFigures, foiled: foiledFigures, statistics: statistics };
+                }
 
-                    let previewTemplate = "<h2>Statistics</h2><div>" + statisticsTemplate + "</div><h2>Regular cards</h2><div class='gallery'>" + regularFigures + "</div><h2>Foiled cards</h2><div class='gallery'>" + foiledFigures + "</div>";
-                    previewSectionResultElement.innerHTML = previewTemplate;
+                generateStatistics(statistics)
+                {
+                    let statisticsTemplate = "<table class='previewStatistics'>";
+                    statisticsTemplate += "<tr><th></th><th>Regular</th><th>Foiled</th><th>Total</th><th>Sum</th></tr>";
+                    statisticsTemplate += "<tr><th>Unique cards</th><td>" + statistics.RegularUniqueCards + "</td><td>" + statistics.FoiledUniqueCards + "</td><td>" + statistics.TotalUniqueCards + "</td><td>" + (statistics.RegularUniqueCards + statistics.FoiledUniqueCards) + "</td></tr>";
+                    statisticsTemplate += "<tr><th>All cards</th><td>" + statistics.RegularCards + "</td><td>" + statistics.FoiledCards + "</td><td>" + statistics.TotalCards + "</td><td>" + (statistics.RegularCards + statistics.FoiledCards) + "</td></tr>";
+                    statisticsTemplate += "</table>";
+
+                    return statisticsTemplate;
+                }
+
+                setPreview(cardCollection)
+                {
+                    const previewSectionResultElement = document.querySelector("#PreviewSectionResult");
+                    const splitBySetCheckboxElement = document.querySelector("#SplitBySetCheckbox");
+
+                    let totalCards = 0;
+                    if (splitBySetCheckboxElement.checked === false)
+                    {
+                        const figures = this.generateFigures(cardCollection);
+                        let statisticsTemplate = this.generateStatistics(figures.statistics);
+
+                        let previewTemplate = "<h2>Statistics</h2><div>" + statisticsTemplate + "</div><h2>Regular cards</h2><div class='gallery'>" + figures.regular + "</div><h2>Foiled cards</h2><div class='gallery'>" + figures.foiled + "</div>";
+                        previewSectionResultElement.innerHTML = previewTemplate;
+                        totalCards = figures.statistics.TotalCards;
+                    }
+                    else
+                    {
+                        totalCards = 0;
+                        previewSectionResultElement.innerHTML = "";
+                        const groupedBySetCards = Object.groupBy(cardCollection, card => card.cardInfo.setCode);
+                        for (const setId in groupedBySetCards)
+                        {
+                            const set = groupedBySetCards[setId];
+
+                            const figures = this.generateFigures(set);
+                            let statisticsTemplate = this.generateStatistics(figures.statistics);
+
+                            let previewTemplate = "<h2>" + set[0].setInfo.name + "</h2><h3>Statistics</h3><div>" + statisticsTemplate + "</div><h3>Regular cards</h3><div class='gallery'>" + figures.regular + "</div><h3>Foiled cards</h3><div class='gallery'>" + figures.foiled + "</div>";
+                            previewSectionResultElement.innerHTML += previewTemplate;
+                            totalCards += figures.statistics.TotalCards;
+                        }
+
+                    }
+
                     initCardEffects();
 
-                    if (statistics.TotalCards > 0)
+                    if (totalCards > 0)
                     {
                         document.querySelector(".exportSectionResult").style.display = "block";
+                        document.querySelector(".previewSection").style.display = "block";
                     }
                     else
                     {
                         document.querySelector(".exportSectionResult").style.display = "none";
+                        document.querySelector(".previewSection").style.display = "none";
                     }
                 }
 
@@ -337,6 +373,11 @@
                     return null;
                 }
 
+                getSetInfo(setId)
+                {
+                    return this.cardsDb.sets[setId];
+                }
+
                 getCollectionInfoByBackup(backup)
                 {
                     let outputCards = [];
@@ -349,6 +390,7 @@
                         const card = backup.OwnedCardQuantitiesV2[i];
 
                         const cardInfo = this.getCardInfo(card.Id);
+                        const setInfo = this.getSetInfo(cardInfo.setCode);
 
                         // If there is no regular alternative, than it's foiled version
                         if (card.Type == 'Regular' && cardInfo.foilTypes.length == 1 && cardInfo.foilTypes[0] != 'None')
@@ -356,7 +398,7 @@
                             card.Type = 'Foiled';
                         }
 
-                        outputCards.push({id: card.Id, quantity: card.Quantity, type: card.Type, cardInfo: cardInfo});
+                        outputCards.push({ id: card.Id, quantity: card.Quantity, type: card.Type, cardInfo: cardInfo, setInfo: setInfo });
                     }
 
                     return outputCards;
@@ -488,7 +530,7 @@
                 const lorcanaCards = new LorcanaCards(await LorcanaCards.loadAllCards());
                 const backupCards = lorcanaCards.getGroupedCollectionInfoByBackup(await lorcanaUI.getBackup());
                 
-                lorcanaUI.setPreview2(backupCards);
+                lorcanaUI.setPreview(backupCards);
             }
 
             async function exportCards(filename, exporter)
@@ -848,6 +890,10 @@
         </div>
 
         <h1>4) Preview</h1>
-        <div class="previewSection" id="PreviewSectionResult"></div>
+        <div class="previewSection">
+            <input type="checkbox" id="SplitBySetCheckbox" onchange="(async () => { await loadPreview() })();" />
+            <label for="SplitBySetCheckbox">Split by set</label>
+            <div class="previewSectionResult" id="PreviewSectionResult"></div>
+        </div>
     </body>
 </html>
