@@ -60,6 +60,7 @@
                 display: none;
             }
 
+
             .previewSectionResult figure {
                 width: 120px;
                 text-align: center;
@@ -184,6 +185,30 @@
                 font-weight: 550;
             }
 
+
+            /* Lightbox modal */
+            .lightbox {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.85);
+                z-index: 1000;
+                justify-content: center;
+                align-items: center;
+                cursor: pointer;
+            }
+
+            .lightbox.active {
+                display: flex;
+            }
+
+            .lightbox img {
+                max-width: 90vw;
+                max-height: 90vh;
+                border-radius: 12px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+                cursor: default;
+            }
         </style>
         
         <script lang="javascript">
@@ -234,7 +259,7 @@
 
                         if (card.regularCount > 0)
                         {
-                            const template = "<figure><div><img src='" + card.cardInfo.images.thumbnail + "' /></div><figcaption>Count: " + card.regularCount + "</figcaption></figure>";
+                            const template = "<figure><div onclick=\"openLightbox('" + card.cardInfo.images.full + "')\"><img src='" + card.cardInfo.images.thumbnail + "' /></div><figcaption>Count: " + card.regularCount + "</figcaption></figure>";
                             regularFigures += template;
 
                             statistics.RegularCards += card.regularCount;
@@ -248,7 +273,7 @@
                             const escapedFoilMask = foilMask.replaceAll("'", "%27");
 
                             let template = "<figure>";
-                            template += "<div data-foil-mask='" + escapedFoilMask + "'>";
+                            template += "<div data-foil-mask='" + escapedFoilMask + "' onclick=\"openLightbox('" + card.cardInfo.images.full + "')\">";
                             template += "<img src='" + card.cardInfo.images.full + "' />";
                             template += "<canvas data-foil-canvas></canvas>";
                             template += "<img data-foil-mask-map alt='' />";
@@ -839,11 +864,27 @@
             }
 
             const lorcanaUI = new LorcanaUI();
-</script>
+
+            function openLightbox(imageSrc)
+            {
+                const lightbox = document.getElementById("Lightbox");
+                lightbox.querySelector("img").src = imageSrc;
+                lightbox.classList.add("active");
+            }
+
+            function closeLightbox(event)
+            {
+                const lightbox = document.getElementById("Lightbox");
+                if (event.target === lightbox)
+                    lightbox.classList.remove("active");
+            }
         </script>
     </head>
 
     <body>
+        <div class="lightbox" id="Lightbox" onclick="closeLightbox(event)">
+            <img src="" alt="Card preview" />
+        </div>
         <h1>1) Find backup url</h1>
         <div class="findBackupUrlSection">
             <p>Open official Lorcana TCG app and find backup url (see screenshots below). Go to link will let you save text file, in which there is the url.</p>
@@ -866,19 +907,19 @@
                 </figure>
             </div>
         </div>
-        
+
         <h1>2) Download backup</h1>
         <div class="downloadBackupSection">
-        Lorcana Backup Url: <input type="text" id="BackupUrlTextbox" placeholder="https://www.disneylorcana.com/en-US/sharing/backup?id=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
-        <button onclick="lorcanaUI.setDownloadUrl(lorcanaUI.getBackupUrl());">Generate Url</button></p>
-        
-        <div class="downloadBackupResult">Download this file and provide it in next step: <a href="" id="DownloadUrlResult"></a></div>
+            Lorcana Backup Url: <input type="text" id="BackupUrlTextbox" placeholder="https://www.disneylorcana.com/en-US/sharing/backup?id=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+            <button onclick="lorcanaUI.setDownloadUrl(lorcanaUI.getBackupUrl());">Generate Url</button></p>
+
+            <div class="downloadBackupResult">Download this file and provide it in next step: <a href="" id="DownloadUrlResult"></a></div>
         </div>
-        
+
         <h1>3) Export cards</h1>
         <div class="exportSection">
-            Provide downloaded backup file: <input type="file" id="BackupFileSelector" accept=".json" onchange="(async () => { await loadPreview() })();"/><br/>
-            
+            Provide downloaded backup file: <input type="file" id="BackupFileSelector" accept=".json" onchange="(async () => { await loadPreview() })();" /><br />
+
             <div class="exportSectionResult">
                 Download:
                 <ul>
