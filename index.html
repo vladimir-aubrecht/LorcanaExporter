@@ -2,33 +2,270 @@
     <head>
 
         <style type="text/css">
-            /* Global styles */
-            .gallery {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 0.5rem;
+            @import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap");
+
+            :root {
+                --bg-1: #07121f;
+                --bg-2: #0c2335;
+                --bg-3: #102d39;
+                --card: rgba(10, 19, 30, 0.8);
+                --card-border: rgba(128, 186, 210, 0.28);
+                --text-main: #e8f7ff;
+                --text-muted: #a7c4d4;
+                --accent: #53d8c5;
+                --accent-2: #f7b35c;
+                --danger: #ff8a7d;
+                --shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
             }
 
-            /* Backup url section */
+            * {
+                box-sizing: border-box;
+            }
 
-            .findBackupUrlSection img {
-                width: 300px;
+            body {
+                margin: 0;
+                font-family: "Sora", "Segoe UI", sans-serif;
+                color: var(--text-main);
+                background: radial-gradient(circle at 10% 10%, #19466f 0%, rgba(25, 70, 111, 0) 40%), radial-gradient(circle at 95% 90%, #1c553b 0%, rgba(28, 85, 59, 0) 40%), linear-gradient(155deg, var(--bg-1), var(--bg-2) 48%, var(--bg-3));
+                min-height: 100vh;
+            }
+
+            body::before,
+            body::after {
+                content: "";
+                position: fixed;
+                pointer-events: none;
+                z-index: 0;
+                opacity: 0.2;
+                filter: blur(2px);
+            }
+
+            body::before {
+                width: 52vw;
+                height: 52vw;
+                top: -12vw;
+                right: -12vw;
+                background: repeating-linear-gradient(45deg, rgba(247, 179, 92, 0.22), rgba(247, 179, 92, 0.22) 8px, rgba(247, 179, 92, 0) 8px, rgba(247, 179, 92, 0) 16px);
+                border-radius: 40% 60% 62% 38% / 55% 43% 57% 45%;
+                animation: floatBlob 14s ease-in-out infinite;
+            }
+
+            body::after {
+                width: 44vw;
+                height: 44vw;
+                bottom: -10vw;
+                left: -10vw;
+                background: repeating-linear-gradient(-30deg, rgba(83, 216, 197, 0.24), rgba(83, 216, 197, 0.24) 10px, rgba(83, 216, 197, 0) 10px, rgba(83, 216, 197, 0) 20px);
+                border-radius: 58% 42% 45% 55% / 38% 62% 48% 52%;
+                animation: floatBlob 16s ease-in-out infinite reverse;
+            }
+
+            @keyframes floatBlob {
+                0%, 100% { transform: translateY(0) rotate(0deg); }
+                50% { transform: translateY(-12px) rotate(4deg); }
+            }
+
+            .pageShell {
+                position: relative;
+                z-index: 1;
+                width: min(1200px, 92vw);
+                margin: 0 auto;
+                padding: 2rem 0 3rem;
+            }
+
+            .hero {
+                background: linear-gradient(140deg, rgba(7, 18, 31, 0.88), rgba(13, 45, 60, 0.82));
+                border: 1px solid rgba(181, 227, 245, 0.25);
+                border-radius: 24px;
+                box-shadow: var(--shadow);
+                padding: 1.5rem 1.25rem;
+                margin-bottom: 1rem;
+                overflow: hidden;
+                position: relative;
+            }
+
+            .hero::after {
+                content: "";
+                position: absolute;
+                inset: auto -20% -45% auto;
+                width: 420px;
+                height: 220px;
+                background: linear-gradient(90deg, rgba(83, 216, 197, 0.28), rgba(247, 179, 92, 0.3));
+                transform: rotate(-12deg);
+                border-radius: 999px;
+                pointer-events: none;
+            }
+
+            .hero h1 {
+                margin: 0;
+                font-weight: 700;
+                letter-spacing: 0.2px;
+                font-size: clamp(1.4rem, 4vw, 2.1rem);
+            }
+
+            .hero p {
+                margin: 0.65rem 0 0;
+                color: var(--text-muted);
+                line-height: 1.55;
+                max-width: 70ch;
+            }
+
+            .stages {
+                display: grid;
+                gap: 0.85rem;
+            }
+
+            .stage {
+                border: 1px solid var(--card-border);
+                background: var(--card);
+                border-radius: 18px;
+                box-shadow: var(--shadow);
+                padding: 1rem;
+                backdrop-filter: blur(7px);
+                opacity: 0;
+                transform: translateY(14px);
+                animation: enter 420ms ease-out forwards;
+            }
+
+            .stage:nth-child(2) { animation-delay: 70ms; }
+            .stage:nth-child(3) { animation-delay: 140ms; }
+            .stage:nth-child(4) { animation-delay: 210ms; }
+
+            @keyframes enter {
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .stage h2 {
+                margin: 0 0 0.7rem;
+                display: flex;
+                align-items: center;
+                gap: 0.65rem;
+                font-size: clamp(1rem, 2.7vw, 1.2rem);
+            }
+
+            .stepBadge {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 1.8rem;
+                height: 1.8rem;
+                border-radius: 999px;
+                font-size: 0.8rem;
+                font-family: "Space Mono", monospace;
+                color: #042326;
+                background: linear-gradient(125deg, var(--accent), #8df4e5);
+            }
+
+            p {
+                color: var(--text-muted);
+            }
+
+            .gallery {
+                display: grid;
+                gap: 0.7rem;
+            }
+
+            .findBackupUrlSection .gallery {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             }
 
             .findBackupUrlSection figure {
-                width: 300px;
-                text-align: center;
-                margin: 0 0 0 0;
+                margin: 0;
+                border: 1px solid rgba(170, 215, 234, 0.25);
+                background: rgba(10, 23, 35, 0.72);
+                border-radius: 14px;
+                padding: 0.5rem;
+            }
+
+            .findBackupUrlSection img {
+                width: 100%;
+                display: block;
+                border-radius: 10px;
             }
 
             .findBackupUrlSection figcaption {
-                margin-top: 0.4rem;
-                font-weight: bold;
+                margin-top: 0.5rem;
+                color: #d6ecf7;
+                font-size: 0.83rem;
+                text-align: center;
             }
 
-            /* Download backup section */
-            .downloadBackupSection {
+            .formRow {
+                display: grid;
+                grid-template-columns: 1fr auto;
+                gap: 0.6rem;
+                align-items: center;
+            }
 
+            input[type=text],
+            input[type=file],
+            button {
+                font: inherit;
+            }
+
+            input[type=text],
+            input[type=file] {
+                width: 100%;
+                padding: 0.74rem 0.9rem;
+                border-radius: 12px;
+                border: 1px solid rgba(151, 200, 219, 0.38);
+                background: rgba(2, 15, 24, 0.6);
+                color: #e9f8ff;
+            }
+
+            input[type=file] {
+                border-style: dashed;
+            }
+
+            input::placeholder {
+                color: #90b0c3;
+            }
+
+            button {
+                border: 0;
+                padding: 0.78rem 1rem;
+                border-radius: 12px;
+                cursor: pointer;
+                color: #042326;
+                font-weight: 700;
+                background: linear-gradient(120deg, var(--accent), #7cead8);
+                transition: transform 120ms ease, box-shadow 150ms ease;
+            }
+
+            button:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 10px 24px rgba(83, 216, 197, 0.3);
+            }
+
+            .checkboxRow {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 0.45rem;
+                margin: 0.5rem 0 0;
+                color: #d9eff9;
+            }
+
+            input[type=checkbox] {
+                width: 18px;
+                height: 18px;
+                accent-color: var(--accent);
+            }
+
+            a {
+                color: #8beeff;
+            }
+
+            .downloadBackupResult,
+            .exportSectionResult {
+                margin-top: 0.8rem;
+                padding: 0.75rem;
+                border-radius: 12px;
+                border: 1px solid rgba(143, 195, 214, 0.3);
+                background: rgba(10, 25, 36, 0.65);
             }
 
             .downloadBackupResult {
@@ -39,50 +276,78 @@
                 display: block;
             }
 
-            .downloadBackupSection input[type=text] {
-                width: 750px;
-            }
-
-            /* Export cards section */
-
-            .exportSection {
-
-            }
-
             .exportSectionResult {
                 display: none;
-                margin-top: 1rem;
             }
 
-            /* Preview section*/
+            .exportSectionResult ul {
+                margin: 0.45rem 0 0;
+                padding-left: 1.1rem;
+                display: grid;
+                gap: 0.3rem;
+            }
 
             .previewSection {
                 display: none;
             }
 
+            #TypeFilterCheckboxes {
+                margin: 0.55rem 0 0.25rem;
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 0.4rem 0.65rem;
+                color: #d9edf8;
+            }
+
+            #TypeFilterCheckboxes strong {
+                font-size: 0.88rem;
+                letter-spacing: 0.3px;
+                color: #9fd8ee;
+                text-transform: uppercase;
+            }
+
+            .previewSectionResult h2,
+            .previewSectionResult h3 {
+                margin: 1.05rem 0 0.55rem;
+            }
+
+            .previewSectionResult h2 {
+                color: #c9edf8;
+                font-size: 1.1rem;
+            }
+
+            .previewSectionResult h3 {
+                color: #9fd8ee;
+                font-size: 1rem;
+            }
+
+            .previewSectionResult .gallery {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
 
             .previewSectionResult figure {
-                width: 120px;
+                width: 100%;
                 text-align: center;
-                margin: 0 0 0 0;
+                margin: 0;
                 perspective: 900px;
             }
 
             .previewSectionResult .gallery figure > div {
                 position: relative;
                 width: 100%;
-                border-radius: 8px;
+                border-radius: 10px;
                 overflow: hidden;
                 transform-style: preserve-3d;
                 transform: rotateX(var(--rot-x, 0deg)) rotateY(var(--rot-y, 0deg));
                 transition: transform 120ms ease-out, box-shadow 180ms ease-out;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
                 --pointer-x: 50%;
                 --pointer-y: 50%;
             }
 
             .previewSectionResult .gallery figure > div:hover {
-                box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+                box-shadow: 0 14px 28px rgba(0, 0, 0, 0.52);
             }
 
             .previewSectionResult .gallery figure > div[data-foil-mask] {
@@ -116,86 +381,79 @@
                 opacity: 0.9;
             }
 
-
-            /* Preview section Statistics */
+            .previewSectionResult figcaption {
+                margin-top: 0.4rem;
+                color: #cde8f4;
+                font-size: 0.76rem;
+                line-height: 1.35;
+            }
 
             .previewStatistics {
                 width: 100%;
-                max-width: 420px;
+                max-width: 520px;
                 border-collapse: separate;
                 border-spacing: 0;
-                font-family: system-ui, -apple-system, sans-serif;
-                font-size: 15px;
-                color: #e0e0e0;
-                background: #1a1d24;
-                border-radius: 10px;
+                font-size: 14px;
+                color: #e2f3ff;
+                background: rgba(12, 28, 40, 0.92);
+                border: 1px solid rgba(153, 208, 230, 0.32);
+                border-radius: 12px;
                 overflow: hidden;
-                box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+                box-shadow: 0 10px 24px rgba(0, 0, 0, 0.36);
             }
 
             .previewStatistics th,
             .previewStatistics td {
-                padding: 10px 14px;
+                padding: 9px 12px;
                 text-align: right;
-                border-bottom: 1px solid #2c303a;
+                border-bottom: 1px solid rgba(116, 157, 177, 0.28);
             }
 
             .previewStatistics th {
                 text-align: left;
                 font-weight: 600;
-                background: #212529;
-                color: #a3bffa;
+                background: rgba(23, 52, 68, 0.86);
+                color: #8fe4dc;
                 text-transform: uppercase;
-                font-size: 0.82em;
+                font-size: 0.78em;
                 letter-spacing: 0.4px;
             }
 
-            .previewStatistics thead th {
-                background: #252b35;
-                color: #c3daff;
-                border-bottom: 2px solid #3b82f6;
-            }
-
-                .previewStatistics tr:last-child td {
+            .previewStatistics tr:last-child td {
                 border-bottom: none;
             }
 
             .previewStatistics td:first-child {
                 text-align: left;
                 font-weight: 500;
-                color: #e2e8f0;
+                color: #e2ecf2;
             }
 
-            /* Highlighting */
-            .previewStatistics tr.highlight,
             .previewStatistics tr:hover {
-                background: #2a3242;
+                background: rgba(29, 59, 76, 0.65);
             }
 
-            /* Better readability for numbers */
             .previewStatistics td:not(:first-child) {
                 font-variant-numeric: tabular-nums;
-                font-family: "SF Mono", "Roboto Mono", Consolas, monospace;
+                font-family: "Space Mono", monospace;
             }
 
-            /* Foiled column is orange */
             .previewStatistics th:nth-child(3),
             .previewStatistics td:nth-child(3) {
-                color: #f6ad55;
-                font-weight: 550;
+                color: var(--accent-2);
+                font-weight: 600;
             }
 
-
-            /* Lightbox modal */
             .lightbox {
                 display: none;
                 position: fixed;
                 inset: 0;
-                background: rgba(0, 0, 0, 0.85);
+                background: rgba(1, 8, 14, 0.88);
                 z-index: 1000;
                 justify-content: center;
                 align-items: center;
                 cursor: pointer;
+                padding: 1rem;
             }
 
             .lightbox.active {
@@ -203,11 +461,35 @@
             }
 
             .lightbox img {
-                max-width: 90vw;
+                max-width: 92vw;
                 max-height: 90vh;
-                border-radius: 12px;
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+                border-radius: 14px;
+                border: 1px solid rgba(147, 204, 227, 0.38);
+                box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
                 cursor: default;
+            }
+
+            @media (max-width: 820px) {
+                .pageShell {
+                    width: min(1200px, 95vw);
+                    padding-top: 1.1rem;
+                }
+
+                .hero {
+                    padding: 1.1rem;
+                }
+
+                .formRow {
+                    grid-template-columns: 1fr;
+                }
+
+                button {
+                    width: 100%;
+                }
+
+                .stage {
+                    padding: 0.9rem;
+                }
             }
         </style>
         
@@ -1160,60 +1442,75 @@
         <div class="lightbox" id="Lightbox" onclick="closeLightbox(event)">
             <img src="" alt="Card preview" />
         </div>
-        <h1>1) Find backup url</h1>
-        <div class="findBackupUrlSection">
-            <p>Open official Lorcana TCG app and find backup url (see screenshots below). Go to link will let you save text file, in which there is the url.</p>
-            <div class="gallery">
-                <figure>
-                    <img src="data/images/home.jpg" />
-                    <figcaption>Home -> 3 dots menu</figcaption>
-                </figure>
-                <figure>
-                    <img src="data/images/settings.jpg" />
-                    <figcaption>Collection backup</figcaption>
-                </figure>
-                <figure>
-                    <img src="data/images/backup.jpg" />
-                    <figcaption>Backup now</figcaption>
-                </figure>
-                <figure>
-                    <img src="data/images/backupLink.jpg" />
-                    <figcaption>Go to the link</figcaption>
-                </figure>
-            </div>
-        </div>
 
-        <h1>2) Download backup</h1>
-        <div class="downloadBackupSection">
-            Lorcana Backup Url: <input type="text" id="BackupUrlTextbox" placeholder="https://www.disneylorcana.com/en-US/sharing/backup?id=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
-            <button onclick="lorcanaUI.setDownloadUrl(lorcanaUI.getBackupUrl());">Generate Url</button></p>
+        <div class="pageShell">
+            <header class="hero">
+                <h1>Lorcana Exporter</h1>
+                <p>Guided workflow to load your official backup, inspect collection state, and export in multiple formats.</p>
+            </header>
 
-            <div class="downloadBackupResult">Download this file and provide it in next step: <a href="" id="DownloadUrlResult"></a></div>
-        </div>
+            <main class="stages">
+                <section class="stage findBackupUrlSection">
+                    <h2><span class="stepBadge">1</span>Find backup URL</h2>
+                    <p>Open the official Lorcana TCG app and follow the path below. After backup creation, open the link and save the downloaded JSON.</p>
+                    <div class="gallery">
+                        <figure>
+                            <img src="data/images/home.jpg" />
+                            <figcaption>Home -> 3 dots menu</figcaption>
+                        </figure>
+                        <figure>
+                            <img src="data/images/settings.jpg" />
+                            <figcaption>Collection backup</figcaption>
+                        </figure>
+                        <figure>
+                            <img src="data/images/backup.jpg" />
+                            <figcaption>Backup now</figcaption>
+                        </figure>
+                        <figure>
+                            <img src="data/images/backupLink.jpg" />
+                            <figcaption>Go to the link</figcaption>
+                        </figure>
+                    </div>
+                </section>
 
-        <h1>3) Export cards</h1>
-        <div class="exportSection">
-            Provide downloaded backup file: <input type="file" id="BackupFileSelector" accept=".json" onchange="(async () => { await loadPreview() })();" /><br />
-            <input type="checkbox" id="MissingCardsModeCheckbox" onchange="(async () => { await loadPreview() })();" />
-            <label for="MissingCardsModeCheckbox">Use missing cards mode (preview + export)</label><br />
+                <section class="stage downloadBackupSection">
+                    <h2><span class="stepBadge">2</span>Generate backup download URL</h2>
+                    <div class="formRow">
+                        <input type="text" id="BackupUrlTextbox" placeholder="https://www.disneylorcana.com/en-US/sharing/backup?id=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+                        <button onclick="lorcanaUI.setDownloadUrl(lorcanaUI.getBackupUrl());">Generate URL</button>
+                    </div>
+                    <div class="downloadBackupResult">Download this file and provide it in next step: <a href="" id="DownloadUrlResult"></a></div>
+                </section>
 
-            <div class="exportSectionResult">
-                Download:
-                <ul>
-                    <li><a href="#" onclick="(async () => { await exportCards('LorcanaGg.csv', new LorcanaGgExporter()) })();">Lorcana.gg</a></li>
-                    <li><a href="#" onclick="(async () => { await exportCards('DreamBornInk.csv', new DreamBornExporter()) })();">DreamBorn.Ink</a></li>
-                    <li><a href="#" onclick="(async () => { await exportCards('InkloreGg.csv', new InkloreGgExporter()) })();">Inklore.gg</a></li>
-                </ul>
-            </div>
-        </div>
+                <section class="stage exportSection">
+                    <h2><span class="stepBadge">3</span>Import backup and export</h2>
+                    <p>Select your downloaded JSON backup file. Once loaded, exports and preview will unlock automatically.</p>
+                    <input type="file" id="BackupFileSelector" accept=".json" onchange="(async () => { await loadPreview() })();" />
+                    <div class="checkboxRow">
+                        <input type="checkbox" id="MissingCardsModeCheckbox" onchange="(async () => { await loadPreview() })();" />
+                        <label for="MissingCardsModeCheckbox">Use missing cards mode (preview + export)</label>
+                    </div>
 
-        <h1>4) Preview</h1>
-        <div class="previewSection">
-            <input type="checkbox" id="SplitBySetCheckbox" checked onchange="(async () => { await loadPreview() })();" />
-            <label for="SplitBySetCheckbox">Split by set</label>
-            <br />
-            <div id="TypeFilterCheckboxes" style="margin-top: 0.4rem;"></div>
-            <div class="previewSectionResult" id="PreviewSectionResult"></div>
+                    <div class="exportSectionResult">
+                        Download:
+                        <ul>
+                            <li><a href="#" onclick="(async () => { await exportCards('LorcanaGg.csv', new LorcanaGgExporter()) })();">Lorcana.gg</a></li>
+                            <li><a href="#" onclick="(async () => { await exportCards('DreamBornInk.csv', new DreamBornExporter()) })();">DreamBorn.Ink</a></li>
+                            <li><a href="#" onclick="(async () => { await exportCards('InkloreGg.csv', new InkloreGgExporter()) })();">Inklore.gg</a></li>
+                        </ul>
+                    </div>
+                </section>
+
+                <section class="stage previewSection">
+                    <h2><span class="stepBadge">4</span>Collection preview</h2>
+                    <div class="checkboxRow">
+                        <input type="checkbox" id="SplitBySetCheckbox" checked onchange="(async () => { await loadPreview() })();" />
+                        <label for="SplitBySetCheckbox">Split by set</label>
+                    </div>
+                    <div id="TypeFilterCheckboxes"></div>
+                    <div class="previewSectionResult" id="PreviewSectionResult"></div>
+                </section>
+            </main>
         </div>
     </body>
 </html>
