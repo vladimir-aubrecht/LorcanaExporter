@@ -215,6 +215,16 @@
 
             class LorcanaUI
             {
+                escapeHtml(text)
+                {
+                    return String(text)
+                        .replaceAll("&", "&amp;")
+                        .replaceAll("<", "&lt;")
+                        .replaceAll(">", "&gt;")
+                        .replaceAll('"', "&quot;")
+                        .replaceAll("'", "&#39;");
+                }
+
                 getBackupUrl()
                 {
                     const backupUrlTextboxElement = document.querySelector("#BackupUrlTextbox");
@@ -239,7 +249,7 @@
                     return JSON.parse(await backupFile.text());
                 }
 
-                generateFigures(cardCollection, previewMode = "owned")
+                generateFigures(cardCollection, previewMode = "owned", showMissingTypeLabel = false)
                 {
                     let regularFigures = "";
                     let foiledFigures = "";
@@ -260,12 +270,24 @@
 
                         if (isMissingPreview)
                         {
-                            const template = "<figure><div onclick=\"openLightbox('" + card.cardInfo.images.full + "')\"><img src='" + card.cardInfo.images.thumbnail + "' /></div><figcaption>Missing</figcaption></figure>";
+                            const cardSearchName = this.escapeHtml(card.cardInfo.fullName);
+                            const missingTypes = Array.isArray(card.missingTypes) ? card.missingTypes : [];
+                            const missingLabel = showMissingTypeLabel ? "<br /><small>Missing: " + missingTypes.map(type => this.escapeHtml(type)).join(", ") + "</small>" : "";
+                            const template = "<figure><div onclick=\"openLightbox('" + card.cardInfo.images.full + "')\"><img src='" + card.cardInfo.images.thumbnail + "' /></div><figcaption>" + cardSearchName + missingLabel + "</figcaption></figure>";
                             regularFigures += template;
 
-                            statistics.RegularCards++;
-                            statistics.RegularUniqueCards++;
-                            statistics.TotalCards++;
+                            const missingRegular = missingTypes.includes("Regular") ? 1 : 0;
+                            const missingFoils = missingTypes.filter(type => type != "Regular").length;
+
+                            statistics.RegularCards += missingRegular;
+                            if (missingRegular > 0)
+                                statistics.RegularUniqueCards++;
+
+                            statistics.FoiledCards += missingFoils;
+                            if (missingFoils > 0)
+                                statistics.FoiledUniqueCards++;
+
+                            statistics.TotalCards += missingTypes.length;
                         }
                         else if (card.regularCount > 0)
                         {
@@ -320,14 +342,17 @@
                     const splitBySetCheckboxElement = document.querySelector("#SplitBySetCheckbox");
                     const isMissingPreview = previewMode == "missing";
 
+                    const checkedTypesForLabel = isMissingPreview ? getCheckedTypes() : new Set();
+                    const showMissingTypeLabel = isMissingPreview && checkedTypesForLabel.has("Regular") && checkedTypesForLabel.has("Foiled");
+
                     let totalCards = 0;
                     if (splitBySetCheckboxElement.checked === false)
                     {
-                        const figures = this.generateFigures(cardCollection, previewMode);
+                        const figures = this.generateFigures(cardCollection, previewMode, showMissingTypeLabel);
                         let statisticsTemplate = this.generateStatistics(figures.statistics);
 
                         let previewTemplate = "<h2>Statistics</h2><div>" + statisticsTemplate + "</div><h2>" + (isMissingPreview ? "Missing cards" : "Regular cards") + "</h2><div class='gallery'>" + figures.regular + "</div>";
-                        if (!isMissingPreview)
+                        if (!isMissingPreview && figures.foiled)
                             previewTemplate += "<h2>Foiled cards</h2><div class='gallery'>" + figures.foiled + "</div>";
 
                         previewSectionResultElement.innerHTML = previewTemplate;
@@ -342,11 +367,11 @@
                         {
                             const set = groupedBySetCards[setId];
 
-                            const figures = this.generateFigures(set, previewMode);
+                            const figures = this.generateFigures(set, previewMode, showMissingTypeLabel);
                             let statisticsTemplate = this.generateStatistics(figures.statistics);
 
                             let previewTemplate = "<h2>" + set[0].setInfo.name + "</h2><h3>Statistics</h3><div>" + statisticsTemplate + "</div><h3>" + (isMissingPreview ? "Missing cards" : "Regular cards") + "</h3><div class='gallery'>" + figures.regular + "</div>";
-                            if (!isMissingPreview)
+                            if (!isMissingPreview && figures.foiled)
                                 previewTemplate += "<h3>Foiled cards</h3><div class='gallery'>" + figures.foiled + "</div>";
 
                             previewSectionResultElement.innerHTML += previewTemplate;
@@ -420,6 +445,74 @@
                     return this.cardsDb.sets[setId];
                 }
 
+                getAvailableCardTypes(cardInfo)
+                {
+                    const foilTypes = Array.isArray(cardInfo.foilTypes) ? cardInfo.foilTypes : [];
+                    const output = [];
+
+                    for (let i = 0; i < foilTypes.length; i++)
+                    {
+                        const type = foilTypes[i];
+                        if (type == "None")
+                        {
+                            if (!output.includes("Regular"))
+                                output.push("Regular");
+                            continue;
+                        }
+
+                        if (!output.includes(type))
+                            output.push(type);
+                    }
+
+                    if (output.length == 0)
+                        output.push("Regular");
+
+                    return output;
+                }
+
+                normalizeOwnedType(rawType, cardInfo)
+                {
+                    if (rawType == "None" || rawType == "Regular")
+                        return "Regular";
+
+                    if (rawType == "Foiled")
+                    {
+                        const foilTypes = this.getAvailableCardTypes(cardInfo).filter(type => type != "Regular");
+                        if (foilTypes.length == 1)
+                            return foilTypes[0];
+                    }
+
+                    return rawType;
+                }
+
+                getOwnedTypeCountsByCardId(backup)
+                {
+                    const ownedTypeCountsByCardId = new Map();
+
+                    if (backup == null)
+                        return ownedTypeCountsByCardId;
+
+                    for (let i = 0; i < backup.OwnedCardQuantitiesV2.length; i++)
+                    {
+                        const backupCard = backup.OwnedCardQuantitiesV2[i];
+                        const cardInfo = this.getCardInfo(backupCard.Id);
+                        if (cardInfo == null)
+                            continue;
+
+                        const normalizedType = this.normalizeOwnedType(backupCard.Type, cardInfo);
+                        const cardId = cardInfo.id;
+
+                        if (!ownedTypeCountsByCardId.has(cardId))
+                            ownedTypeCountsByCardId.set(cardId, new Map());
+
+                        const typeCounts = ownedTypeCountsByCardId.get(cardId);
+                        const previousCount = typeCounts.get(normalizedType) ?? 0;
+                        typeCounts.set(normalizedType, previousCount + backupCard.Quantity);
+                    }
+
+                    return ownedTypeCountsByCardId;
+                }
+
                 getCollectionInfoByBackup(backup)
                 {
                     let outputCards = [];
@@ -485,24 +578,39 @@
 
                 getMissingCollectionInfoByBackup(backup)
                 {
-                    const ownedCollection = this.getGroupedCollectionInfoByBackup(backup);
-                    const ownedIds = new Set(ownedCollection.map(card => card.id));
+                    const ownedTypeCountsByCardId = this.getOwnedTypeCountsByCardId(backup);
                     const output = [];
 
                     for (let i = 0; i < this.cardsDb.cards.length; i++)
                     {
                         const cardInfo = this.cardsDb.cards[i];
-                        if (ownedIds.has(cardInfo.id))
+                        const availableTypes = this.getAvailableCardTypes(cardInfo);
+                        const ownedTypeCounts = ownedTypeCountsByCardId.get(cardInfo.id) ?? new Map();
+
+                        const missingTypes = [];
+                        for (let j = 0; j < availableTypes.length; j++)
+                        {
+                            const type = availableTypes[j];
+                            const ownedCount = ownedTypeCounts.get(type) ?? 0;
+                            if (ownedCount <= 0)
+                                missingTypes.push(type);
+                        }
+
+                        if (missingTypes.length == 0)
                             continue;
+
+                        const missingRegular = missingTypes.includes("Regular") ? 1 : 0;
+                        const missingFoils = missingTypes.filter(type => type != "Regular").length;
 
                         output.push({
                             id: cardInfo.id,
-                            quantity: 1,
+                            quantity: missingTypes.length,
                             type: "Regular",
                             cardInfo: cardInfo,
                             setInfo: this.getSetInfo(cardInfo.setCode),
-                            regularCount: 1,
-                            foiledCount: 0
+                            regularCount: missingRegular,
+                            foiledCount: missingFoils,
+                            missingTypes: missingTypes
                         });
                     }
 
@@ -593,6 +701,115 @@
                 }
             }
 
+            let currentCardCollection = null;
+            let currentPreviewMode = "owned";
+
+            function collectAvailableTypes(cardCollection, previewMode)
+            {
+                const types = new Set();
+                const isMissingMode = previewMode == "missing";
+
+                for (const card of cardCollection)
+                {
+                    if (isMissingMode)
+                    {
+                        for (const t of (card.missingTypes ?? []))
+                        {
+                            if (t == "Regular")
+                                types.add("Regular");
+                            else
+                                types.add("Foiled");
+                        }
+                    }
+                    else
+                    {
+                        if (card.regularCount > 0) types.add("Regular");
+                        if (card.foiledCount > 0) types.add("Foiled");
+                    }
+                }
+
+                return [...types].sort((a, b) => {
+                    if (a == "Regular") return -1;
+                    if (b == "Regular") return 1;
+                    return a.localeCompare(b);
+                });
+            }
+
+            function buildTypeFilters(cardCollection, previewMode)
+            {
+                const container = document.querySelector("#TypeFilterCheckboxes");
+                const types = collectAvailableTypes(cardCollection, previewMode);
+
+                const existingChecked = new Set();
+                container.querySelectorAll("input[type=checkbox]").forEach(cb => {
+                    if (cb.checked) existingChecked.add(cb.dataset.cardType);
+                });
+                const isFirstBuild = container.children.length == 0;
+
+                container.innerHTML = "<strong>Show types:</strong> ";
+                for (const type of types)
+                {
+                    const checked = isFirstBuild || existingChecked.has(type);
+                    const id = "TypeFilter_" + type;
+                        container.innerHTML += "<input type='checkbox' id='" + id + "' data-card-type='" + type + "' " + (checked ? "checked" : "") + " onchange='onTypeFilterChange(this)' /> <label for='" + id + "'>" + type + "</label> &nbsp;";
+                }
+            }
+
+                function onTypeFilterChange(checkbox)
+                {
+                    const allCheckboxes = document.querySelectorAll("#TypeFilterCheckboxes input[type=checkbox]");
+                    const anyChecked = [...allCheckboxes].some(cb => cb.checked);
+                    if (!anyChecked)
+                    {
+                        checkbox.checked = true;
+                        return;
+                    }
+                    applyTypeFilter();
+                }
+
+            function getCheckedTypes()
+            {
+                const checkedTypes = new Set();
+                document.querySelectorAll("#TypeFilterCheckboxes input[type=checkbox]:checked").forEach(cb => {
+                    checkedTypes.add(cb.dataset.cardType);
+                });
+                return checkedTypes;
+            }
+
+            function applyTypeFilter()
+            {
+                if (!currentCardCollection) return;
+
+                const checkedTypes = getCheckedTypes();
+                const isMissingMode = currentPreviewMode == "missing";
+
+                const filtered = [];
+                for (const card of currentCardCollection)
+                {
+                    if (isMissingMode)
+                    {
+                        const filteredMissingTypes = (card.missingTypes ?? []).filter(t =>
+                            (t == "Regular" && checkedTypes.has("Regular")) ||
+                            (t != "Regular" && checkedTypes.has("Foiled"))
+                        );
+                        if (filteredMissingTypes.length == 0) continue;
+
+                        const missingRegular = filteredMissingTypes.includes("Regular") ? 1 : 0;
+                        const missingFoils = filteredMissingTypes.filter(t => t != "Regular").length;
+                        filtered.push(Object.assign({}, card, { missingTypes: filteredMissingTypes, regularCount: missingRegular, foiledCount: missingFoils, quantity: filteredMissingTypes.length }));
+                    }
+                    else
+                    {
+                        const regularCount = checkedTypes.has("Regular") ? card.regularCount : 0;
+                        const foiledCount = checkedTypes.has("Foiled") ? card.foiledCount : 0;
+                        if (regularCount == 0 && foiledCount == 0) continue;
+                        filtered.push(Object.assign({}, card, { regularCount, foiledCount }));
+                    }
+                }
+
+                lorcanaUI.setPreview(filtered, currentPreviewMode);
+            }
+
             async function loadPreview()
             {
                 const lorcanaCards = new LorcanaCards(await LorcanaCards.loadAllCards());
@@ -600,8 +817,12 @@
                 const backupCards = showMissingCards
                     ? lorcanaCards.getMissingCollectionInfoByBackup(await lorcanaUI.getBackup())
                     : lorcanaCards.getGroupedCollectionInfoByBackup(await lorcanaUI.getBackup());
-                
-                lorcanaUI.setPreview(backupCards, showMissingCards ? "missing" : "owned");
+
+                currentCardCollection = backupCards;
+                currentPreviewMode = showMissingCards ? "missing" : "owned";
+
+                buildTypeFilters(currentCardCollection, currentPreviewMode);
+                applyTypeFilter();
             }
 
             async function exportCards(filename, exporter)
@@ -988,8 +1209,10 @@
 
         <h1>4) Preview</h1>
         <div class="previewSection">
-            <input type="checkbox" id="SplitBySetCheckbox" onchange="(async () => { await loadPreview() })();" />
+            <input type="checkbox" id="SplitBySetCheckbox" checked onchange="(async () => { await loadPreview() })();" />
             <label for="SplitBySetCheckbox">Split by set</label>
+            <br />
+            <div id="TypeFilterCheckboxes" style="margin-top: 0.4rem;"></div>
             <div class="previewSectionResult" id="PreviewSectionResult"></div>
         </div>
     </body>
