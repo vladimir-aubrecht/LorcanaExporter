@@ -239,10 +239,11 @@
                     return JSON.parse(await backupFile.text());
                 }
 
-                generateFigures(cardCollection)
+                generateFigures(cardCollection, previewMode = "owned")
                 {
                     let regularFigures = "";
                     let foiledFigures = "";
+                    const isMissingPreview = previewMode == "missing";
 
                     let statistics = {
                         TotalCards: 0,
@@ -257,7 +258,16 @@
                     {
                         const card = cardCollection[i];
 
-                        if (card.regularCount > 0)
+                        if (isMissingPreview)
+                        {
+                            const template = "<figure><div onclick=\"openLightbox('" + card.cardInfo.images.full + "')\"><img src='" + card.cardInfo.images.thumbnail + "' /></div><figcaption>Missing</figcaption></figure>";
+                            regularFigures += template;
+
+                            statistics.RegularCards++;
+                            statistics.RegularUniqueCards++;
+                            statistics.TotalCards++;
+                        }
+                        else if (card.regularCount > 0)
                         {
                             const template = "<figure><div onclick=\"openLightbox('" + card.cardInfo.images.full + "')\"><img src='" + card.cardInfo.images.thumbnail + "' /></div><figcaption>Count: " + card.regularCount + "</figcaption></figure>";
                             regularFigures += template;
@@ -267,7 +277,7 @@
                             statistics.TotalCards += card.regularCount;
                         }
 
-                        if (card.foiledCount > 0)
+                        if (!isMissingPreview && card.foiledCount > 0)
                         {
                             const foilMask = card.cardInfo.images.foilMask ?? "";
                             const escapedFoilMask = foilMask.replaceAll("'", "%27");
@@ -304,18 +314,22 @@
                     return statisticsTemplate;
                 }
 
-                setPreview(cardCollection)
+                setPreview(cardCollection, previewMode = "owned")
                 {
                     const previewSectionResultElement = document.querySelector("#PreviewSectionResult");
                     const splitBySetCheckboxElement = document.querySelector("#SplitBySetCheckbox");
+                    const isMissingPreview = previewMode == "missing";
 
                     let totalCards = 0;
                     if (splitBySetCheckboxElement.checked === false)
                     {
-                        const figures = this.generateFigures(cardCollection);
+                        const figures = this.generateFigures(cardCollection, previewMode);
                         let statisticsTemplate = this.generateStatistics(figures.statistics);
 
-                        let previewTemplate = "<h2>Statistics</h2><div>" + statisticsTemplate + "</div><h2>Regular cards</h2><div class='gallery'>" + figures.regular + "</div><h2>Foiled cards</h2><div class='gallery'>" + figures.foiled + "</div>";
+                        let previewTemplate = "<h2>Statistics</h2><div>" + statisticsTemplate + "</div><h2>" + (isMissingPreview ? "Missing cards" : "Regular cards") + "</h2><div class='gallery'>" + figures.regular + "</div>";
+                        if (!isMissingPreview)
+                            previewTemplate += "<h2>Foiled cards</h2><div class='gallery'>" + figures.foiled + "</div>";
+
                         previewSectionResultElement.innerHTML = previewTemplate;
                         totalCards = figures.statistics.TotalCards;
                     }
@@ -328,10 +342,13 @@
                         {
                             const set = groupedBySetCards[setId];
 
-                            const figures = this.generateFigures(set);
+                            const figures = this.generateFigures(set, previewMode);
                             let statisticsTemplate = this.generateStatistics(figures.statistics);
 
-                            let previewTemplate = "<h2>" + set[0].setInfo.name + "</h2><h3>Statistics</h3><div>" + statisticsTemplate + "</div><h3>Regular cards</h3><div class='gallery'>" + figures.regular + "</div><h3>Foiled cards</h3><div class='gallery'>" + figures.foiled + "</div>";
+                            let previewTemplate = "<h2>" + set[0].setInfo.name + "</h2><h3>Statistics</h3><div>" + statisticsTemplate + "</div><h3>" + (isMissingPreview ? "Missing cards" : "Regular cards") + "</h3><div class='gallery'>" + figures.regular + "</div>";
+                            if (!isMissingPreview)
+                                previewTemplate += "<h3>Foiled cards</h3><div class='gallery'>" + figures.foiled + "</div>";
+
                             previewSectionResultElement.innerHTML += previewTemplate;
                             totalCards += figures.statistics.TotalCards;
                         }
@@ -465,6 +482,32 @@
 
                     return output;
                 }
+
+                getMissingCollectionInfoByBackup(backup)
+                {
+                    const ownedCollection = this.getGroupedCollectionInfoByBackup(backup);
+                    const ownedIds = new Set(ownedCollection.map(card => card.id));
+                    const output = [];
+
+                    for (let i = 0; i < this.cardsDb.cards.length; i++)
+                    {
+                        const cardInfo = this.cardsDb.cards[i];
+                        if (ownedIds.has(cardInfo.id))
+                            continue;
+
+                        output.push({
+                            id: cardInfo.id,
+                            quantity: 0,
+                            type: "Regular",
+                            cardInfo: cardInfo,
+                            setInfo: this.getSetInfo(cardInfo.setCode),
+                            regularCount: 0,
+                            foiledCount: 0
+                        });
+                    }
+
+                    return output;
+                }
             }
 
             class LorcanaGgExporter
@@ -553,9 +596,12 @@
             async function loadPreview()
             {
                 const lorcanaCards = new LorcanaCards(await LorcanaCards.loadAllCards());
-                const backupCards = lorcanaCards.getGroupedCollectionInfoByBackup(await lorcanaUI.getBackup());
+                const showMissingCards = document.querySelector("#PreviewMissingCardsCheckbox").checked;
+                const backupCards = showMissingCards
+                    ? lorcanaCards.getMissingCollectionInfoByBackup(await lorcanaUI.getBackup())
+                    : lorcanaCards.getGroupedCollectionInfoByBackup(await lorcanaUI.getBackup());
                 
-                lorcanaUI.setPreview(backupCards);
+                lorcanaUI.setPreview(backupCards, showMissingCards ? "missing" : "owned");
             }
 
             async function exportCards(filename, exporter)
@@ -934,6 +980,9 @@
         <div class="previewSection">
             <input type="checkbox" id="SplitBySetCheckbox" onchange="(async () => { await loadPreview() })();" />
             <label for="SplitBySetCheckbox">Split by set</label>
+            <br />
+            <input type="checkbox" id="PreviewMissingCardsCheckbox" onchange="(async () => { await loadPreview() })();" />
+            <label for="PreviewMissingCardsCheckbox">Show missing cards</label>
             <div class="previewSectionResult" id="PreviewSectionResult"></div>
         </div>
     </body>
