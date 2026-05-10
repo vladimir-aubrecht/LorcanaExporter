@@ -497,11 +497,11 @@
 
                         output.push({
                             id: cardInfo.id,
-                            quantity: 0,
+                            quantity: 1,
                             type: "Regular",
                             cardInfo: cardInfo,
                             setInfo: this.getSetInfo(cardInfo.setCode),
-                            regularCount: 0,
+                            regularCount: 1,
                             foiledCount: 0
                         });
                     }
@@ -596,7 +596,7 @@
             async function loadPreview()
             {
                 const lorcanaCards = new LorcanaCards(await LorcanaCards.loadAllCards());
-                const showMissingCards = document.querySelector("#PreviewMissingCardsCheckbox").checked;
+                const showMissingCards = document.querySelector("#MissingCardsModeCheckbox").checked;
                 const backupCards = showMissingCards
                     ? lorcanaCards.getMissingCollectionInfoByBackup(await lorcanaUI.getBackup())
                     : lorcanaCards.getGroupedCollectionInfoByBackup(await lorcanaUI.getBackup());
@@ -609,9 +609,17 @@
                 event.preventDefault();
                 
                 const lorcanaCards = new LorcanaCards(await LorcanaCards.loadAllCards());
-                const backupCards = lorcanaCards.getGroupedCollectionInfoByBackup(await lorcanaUI.getBackup());
+                const showMissingCards = document.querySelector("#MissingCardsModeCheckbox").checked;
+                const backupCards = showMissingCards
+                    ? lorcanaCards.getMissingCollectionInfoByBackup(await lorcanaUI.getBackup())
+                    : lorcanaCards.getGroupedCollectionInfoByBackup(await lorcanaUI.getBackup());
+
+                const exportFilename = showMissingCards
+                    ? filename.replace(".csv", ".missing.csv")
+                    : filename;
+
                 const output = exporter.generate(backupCards);
-                lorcanaUI.triggerFileDownload(filename, output);       
+                lorcanaUI.triggerFileDownload(exportFilename, output);       
             }
 
             const maxCardTiltDeg = 22;
@@ -965,6 +973,8 @@
         <h1>3) Export cards</h1>
         <div class="exportSection">
             Provide downloaded backup file: <input type="file" id="BackupFileSelector" accept=".json" onchange="(async () => { await loadPreview() })();" /><br />
+            <input type="checkbox" id="MissingCardsModeCheckbox" onchange="(async () => { await loadPreview() })();" />
+            <label for="MissingCardsModeCheckbox">Use missing cards mode (preview + export)</label><br />
 
             <div class="exportSectionResult">
                 Download:
@@ -980,9 +990,6 @@
         <div class="previewSection">
             <input type="checkbox" id="SplitBySetCheckbox" onchange="(async () => { await loadPreview() })();" />
             <label for="SplitBySetCheckbox">Split by set</label>
-            <br />
-            <input type="checkbox" id="PreviewMissingCardsCheckbox" onchange="(async () => { await loadPreview() })();" />
-            <label for="PreviewMissingCardsCheckbox">Show missing cards</label>
             <div class="previewSectionResult" id="PreviewSectionResult"></div>
         </div>
     </body>
