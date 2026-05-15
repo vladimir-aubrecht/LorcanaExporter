@@ -609,7 +609,13 @@
                 {
                     const cardName = cardInfo.fullName;
                     const escapedCardName = this.escapeHtml(cardName);
-                    const baseUrl = this.getCardmarketSearchUrl(cardName);
+                    let baseUrl = null;
+                    if (cardInfo.externalLinks && cardInfo.externalLinks.cardmarketUrl &&
+                        cardInfo.externalLinks.cardmarketUrl.includes('/Products/Singles/')) {
+                        baseUrl = cardInfo.externalLinks.cardmarketUrl;
+                    } else {
+                        baseUrl = this.getCardmarketSearchUrl(cardName);
+                    }
                     const nameLink = "<a href='" + baseUrl + "' target='_blank' rel='noopener noreferrer'>" + escapedCardName + "</a>";
                     return { nameLink: nameLink };
                 }
