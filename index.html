@@ -581,7 +581,141 @@
             }
         </style>
         
+
+        <style>
+            .compareSection {
+                margin: 1.2rem 0 1.5rem;
+                padding: 1rem;
+                border-radius: 12px;
+                background: rgba(20, 40, 60, 0.82);
+                border: 1px solid #3ad6e2;
+            }
+        </style>
+
         <script lang="javascript">
+            function hasSecondBackupSelected()
+            {
+                const secondBackupInput = document.querySelector("#SecondBackupFileSelector");
+                return !!(secondBackupInput && secondBackupInput.files && secondBackupInput.files.length > 0);
+            }
+
+            function updateMainActionButton()
+            {
+                const button = document.querySelector("#MainActionButton");
+                if (!button)
+                    return;
+
+                const missingModeCheckbox = document.querySelector("#MissingCardsModeCheckbox");
+                const isMissingMode = !!(missingModeCheckbox && missingModeCheckbox.checked);
+
+                if (!isMissingMode && hasSecondBackupSelected())
+                    button.textContent = "Compare with second backup";
+                else
+                    button.textContent = "Preview collection";
+            }
+
+            async function runMainAction()
+            {
+                const missingModeCheckbox = document.querySelector("#MissingCardsModeCheckbox");
+                const isMissingMode = !!(missingModeCheckbox && missingModeCheckbox.checked);
+
+                if (!isMissingMode && hasSecondBackupSelected())
+                    await compareBackups();
+                else
+                    await loadPreview();
+            }
+
+            async function updateModeVisibility()
+            {
+                const missingModeCheckbox = document.querySelector("#MissingCardsModeCheckbox");
+                const compareSection = document.querySelector("#CompareModeSection");
+                if (!missingModeCheckbox || !compareSection)
+                    return;
+
+                const previewSectionElement = document.querySelector(".previewSection");
+                const previewWasVisible = previewSectionElement && previewSectionElement.style.display == "block";
+
+                if (missingModeCheckbox.checked)
+                {
+                    compareSection.style.display = "none";
+                    if (currentPreviewMode == "compare")
+                    {
+                        currentCardCollection = null;
+                        currentDisplayedCardCollection = null;
+                        currentPreviewMode = "owned";
+                        document.querySelector("#PreviewSectionResult").innerHTML = "";
+                        document.querySelector("#TypeFilterCheckboxes").innerHTML = "";
+                        document.querySelector(".previewSection").style.display = "none";
+                        document.querySelector(".exportSectionResult").style.display = "none";
+                    }
+                    else if (previewWasVisible)
+                    {
+                        await loadPreview();
+                    }
+                }
+                else
+                {
+                    compareSection.style.display = "block";
+                    if (previewWasVisible)
+                        await loadPreview();
+                }
+
+                updateMainActionButton();
+            }
+
+            function onSplitBySetChange()
+            {
+                if (!currentCardCollection)
+                    return;
+
+                applyTypeFilter();
+            }
+
+            async function getSecondBackup() {
+                const backupFile = document.querySelector("#SecondBackupFileSelector").files[0];
+                if (!backupFile) return null;
+                const backupText = await backupFile.text();
+                return JSON.parse(backupText);
+            }
+
+            async function compareBackups() {
+                const lorcanaCards = new LorcanaCards(await LorcanaCards.loadAllCards());
+                const myBackup = await lorcanaUI.getBackup();
+                const otherBackup = await getSecondBackup();
+                if (!myBackup || !otherBackup) {
+                    alert("You must select both backup files.");
+                    return;
+                }
+
+                // Build set of owned keys for my collection
+                const myIds = new Set(myBackup.OwnedCardQuantitiesV2.map(c => c.Id + ':' + lorcanaCards.normalizeOwnedType(c.Type, lorcanaCards.getCardInfo(c.Id))));
+                // Find cards in otherBackup that are not in myBackup
+                const missing = [];
+                for (const card of otherBackup.OwnedCardQuantitiesV2) {
+                    const cardInfo = lorcanaCards.getCardInfo(card.Id);
+                    if (!cardInfo) continue;
+                    const type = lorcanaCards.normalizeOwnedType(card.Type, cardInfo);
+                    const key = card.Id + ':' + type;
+                    if (!myIds.has(key)) {
+                        // For compare, treat as missing type for filter logic
+                        missing.push({
+                            id: card.Id,
+                            quantity: card.Quantity,
+                            type: type,
+                            cardInfo: cardInfo,
+                            setInfo: lorcanaCards.getSetInfo(cardInfo.setCode),
+                            regularCount: type === 'Regular' ? card.Quantity : 0,
+                            foiledCount: type !== 'Regular' ? card.Quantity : 0,
+                            missingTypes: [type]
+                        });
+                    }
+                }
+                currentCardCollection = missing;
+                currentPreviewMode = "compare";
+                buildTypeFilters(currentCardCollection, currentPreviewMode);
+                applyTypeFilter();
+                document.querySelector(".previewSection").style.display = "block";
+            }
 
             class LorcanaUI
             {
@@ -657,7 +791,7 @@
                 {
                     let regularFigures = "";
                     let foiledFigures = "";
-                    const isMissingPreview = previewMode == "missing";
+                    const isMissingPreview = previewMode == "missing" || previewMode == "compare";
 
                     let statistics = {
                         TotalCards: 0,
@@ -746,7 +880,7 @@
                 {
                     const previewSectionResultElement = document.querySelector("#PreviewSectionResult");
                     const splitBySetCheckboxElement = document.querySelector("#SplitBySetCheckbox");
-                    const isMissingPreview = previewMode == "missing";
+                    const isMissingPreview = previewMode == "missing" || previewMode == "compare";
 
                     const checkedTypesForLabel = isMissingPreview ? getCheckedTypes() : new Set();
                     const showMissingTypeLabel = isMissingPreview && checkedTypesForLabel.has("Regular") && checkedTypesForLabel.has("Foiled");
@@ -1114,12 +1248,13 @@
             }
 
             let currentCardCollection = null;
+            let currentDisplayedCardCollection = null;
             let currentPreviewMode = "owned";
 
             function collectAvailableTypes(cardCollection, previewMode)
             {
                 const types = new Set();
-                const isMissingMode = previewMode == "missing";
+                const isMissingMode = previewMode == "missing" || previewMode == "compare";
 
                 for (const card of cardCollection)
                 {
@@ -1193,7 +1328,7 @@
                 if (!currentCardCollection) return;
 
                 const checkedTypes = getCheckedTypes();
-                const isMissingMode = currentPreviewMode == "missing";
+                const isMissingMode = currentPreviewMode == "missing" || currentPreviewMode == "compare";
 
                 const filtered = [];
                 for (const card of currentCardCollection)
@@ -1219,27 +1354,46 @@
                     }
                 }
 
+                currentDisplayedCardCollection = filtered;
                 lorcanaUI.setPreview(filtered, currentPreviewMode);
             }
 
-            async function loadPreview()
-            {
+            async function loadPreview() {
                 const lorcanaCards = new LorcanaCards(await LorcanaCards.loadAllCards());
+                const backup = await lorcanaUI.getBackup();
+                if (!backup) {
+                    alert("Please select your backup file first.");
+                    return;
+                }
                 const showMissingCards = document.querySelector("#MissingCardsModeCheckbox").checked;
                 const backupCards = showMissingCards
-                    ? lorcanaCards.getMissingCollectionInfoByBackup(await lorcanaUI.getBackup())
-                    : lorcanaCards.getGroupedCollectionInfoByBackup(await lorcanaUI.getBackup());
+                    ? lorcanaCards.getMissingCollectionInfoByBackup(backup)
+                    : lorcanaCards.getGroupedCollectionInfoByBackup(backup);
 
                 currentCardCollection = backupCards;
                 currentPreviewMode = showMissingCards ? "missing" : "owned";
 
                 buildTypeFilters(currentCardCollection, currentPreviewMode);
                 applyTypeFilter();
+                document.querySelector(".previewSection").style.display = "block";
             }
 
             async function exportCards(filename, exporter)
             {
                 event.preventDefault();
+
+                if (currentPreviewMode == "compare")
+                {
+                    if (!currentDisplayedCardCollection)
+                    {
+                        alert("Run compare first so there is data to export.");
+                        return;
+                    }
+
+                    const compareOutput = exporter.generate(currentDisplayedCardCollection);
+                    lorcanaUI.triggerFileDownload(filename.replace(".csv", ".compare.csv"), compareOutput);
+                    return;
+                }
                 
                 const lorcanaCards = new LorcanaCards(await LorcanaCards.loadAllCards());
                 const showMissingCards = document.querySelector("#MissingCardsModeCheckbox").checked;
@@ -1580,6 +1734,7 @@
     </head>
 
     <body>
+        <!-- Compare feature UI will be moved to exportSection below -->
         <div class="lightbox" id="Lightbox" onclick="closeLightbox(event)">
             <img src="" alt="Card preview" />
         </div>
@@ -1625,10 +1780,10 @@
 
                 <section class="stage exportSection">
                     <h2><span class="stepBadge">3</span>Import backup and export</h2>
-                    <p>Select your downloaded JSON backup file. Once loaded, exports and preview will unlock automatically.</p>
-                    <input type="file" id="BackupFileSelector" accept=".json" onchange="(async () => { await loadPreview() })();" />
+                    <p>Select your downloaded JSON backup file. Preview and export options will appear after you load a file.</p>
+                    <input type="file" id="BackupFileSelector" accept=".json" onchange="updateMainActionButton()" />
                     <div class="checkboxRow">
-                        <input type="checkbox" id="MissingCardsModeCheckbox" onchange="(async () => { await loadPreview() })();" />
+                        <input type="checkbox" id="MissingCardsModeCheckbox" onchange="(async () => { await updateModeVisibility() })();" />
                         <label for="MissingCardsModeCheckbox">Use missing cards mode (preview + export)</label>
                     </div>
 
@@ -1640,12 +1795,22 @@
                             <li><a href="#" onclick="(async () => { await exportCards('InkloreGg.csv', new InkloreGgExporter()) })();">Inklore.gg</a></li>
                         </ul>
                     </div>
+
+                    <div class="compareSection" id="CompareModeSection" style="margin-top:1.5rem;">
+                        <label for="SecondBackupFileSelector"><strong>Second backup JSON file (for compare):</strong></label>
+                        <input type="file" id="SecondBackupFileSelector" accept="application/json" onchange="updateMainActionButton()" />
+                        <span style="color:#7cead8;font-size:0.95em;">Shows cards you are missing but the other user has.</span>
+                    </div>
+
+                    <div style="margin-top:1.2rem;">
+                        <button id="MainActionButton" onclick="runMainAction()">Preview collection</button>
+                    </div>
                 </section>
 
-                <section class="stage previewSection">
+                <section class="stage previewSection" style="display:none;">
                     <h2><span class="stepBadge">4</span>Collection preview</h2>
                     <div class="checkboxRow">
-                        <input type="checkbox" id="SplitBySetCheckbox" checked onchange="(async () => { await loadPreview() })();" />
+                        <input type="checkbox" id="SplitBySetCheckbox" checked onchange="onSplitBySetChange()" />
                         <label for="SplitBySetCheckbox">Split by set</label>
                     </div>
                     <div id="TypeFilterCheckboxes"></div>
@@ -1654,4 +1819,9 @@
             </main>
         </div>
     </body>
+
+    <script>
+        updateModeVisibility();
+        updateMainActionButton();
+    </script>
 </html>
