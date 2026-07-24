@@ -414,6 +414,7 @@
                 display: block;
                 width: 100%;
                 height: auto;
+                aspect-ratio: 367 / 512;
             }
 
             .previewSectionResult .gallery figure > div > img[data-foil-mask-map] {
@@ -787,6 +788,14 @@
                     return parsed;
                 }
 
+                // Thumbnails from the card API are always 367x512. Declaring the size upfront reserves
+                // the layout box before the image loads, which is what makes lazy loading actually skip
+                // offscreen cards - without it every image counts as visible and all of them get fetched.
+                generateThumbnailImage(cardInfo)
+                {
+                    return "<img src='" + cardInfo.images.thumbnail + "' width='" + thumbnailImageWidth + "' height='" + thumbnailImageHeight + "' loading='lazy' decoding='async' />";
+                }
+
                 generateFigures(cardCollection, previewMode = "owned", showMissingTypeLabel = false)
                 {
                     let regularFigures = "";
@@ -811,7 +820,7 @@
                             const missingTypes = Array.isArray(card.missingTypes) ? card.missingTypes : [];
                             const cardmarketLinks = this.buildCardmarketLinks(card.cardInfo);
                             const missingLabel = showMissingTypeLabel ? "<br /><small>Missing: " + missingTypes.map(type => this.escapeHtml(type)).join(", ") + "</small>" : "";
-                            const template = "<figure><div onclick=\"openLightbox('" + card.cardInfo.images.full + "')\"><img src='" + card.cardInfo.images.thumbnail + "' /></div><figcaption>" + cardmarketLinks.nameLink + missingLabel + "</figcaption></figure>";
+                            const template = "<figure><div onclick=\"openLightbox('" + card.cardInfo.images.full + "')\">" + this.generateThumbnailImage(card.cardInfo) + "</div><figcaption>" + cardmarketLinks.nameLink + missingLabel + "</figcaption></figure>";
                             regularFigures += template;
 
                             const missingRegular = missingTypes.includes("Regular") ? 1 : 0;
@@ -829,7 +838,7 @@
                         }
                         else if (card.regularCount > 0)
                         {
-                            const template = "<figure><div onclick=\"openLightbox('" + card.cardInfo.images.full + "')\"><img src='" + card.cardInfo.images.thumbnail + "' /></div><figcaption>Count: " + card.regularCount + "</figcaption></figure>";
+                            const template = "<figure><div onclick=\"openLightbox('" + card.cardInfo.images.full + "')\">" + this.generateThumbnailImage(card.cardInfo) + "</div><figcaption>Count: " + card.regularCount + "</figcaption></figure>";
                             regularFigures += template;
 
                             statistics.RegularCards += card.regularCount;
@@ -844,7 +853,7 @@
 
                             let template = "<figure>";
                             template += "<div data-foil-mask='" + escapedFoilMask + "' onclick=\"openLightbox('" + card.cardInfo.images.full + "')\">";
-                            template += "<img src='" + card.cardInfo.images.thumbnail + "' />";
+                            template += this.generateThumbnailImage(card.cardInfo);
                             template += "<canvas data-foil-canvas></canvas>";
                             template += "<img data-foil-mask-map alt='' />";
                             template += "</div>";
@@ -1411,6 +1420,8 @@
 
             const maxCardTiltDeg = 22;
             const tiltResponseExponent = 0.6;
+            const thumbnailImageWidth = 367;
+            const thumbnailImageHeight = 512;
 
             function shouldEnableAdvancedCardEffects()
             {
@@ -1581,6 +1592,11 @@
                 }
 
                 if (!canvas || !image)
+                    return;
+
+                // Thumbnails are lazy loaded, so a surface can be laid out long before its image arrives.
+                // Rendering now would allocate a canvas backing store for cards that may never be scrolled to.
+                if (!image.complete || !image.naturalWidth)
                     return;
 
                 const width = image.clientWidth;
