@@ -1209,6 +1209,17 @@
 
             class DreamBornExporter
             {
+                // Promo cards keep a numeric setCode (same as the base set), so on their own
+                // setCode + number collides with a regular card of the same number. The printed
+                // identifier carries a promo group token instead of the set total, e.g.
+                // "10/P4 • EN • 13" vs a regular "10/204 • EN • 13". DreamBorn expects that token
+                // appended to the card number ("10/P4") and the rarity reported as "Promo".
+                getPromoToken(cardInfo)
+                {
+                    const match = String(cardInfo.fullIdentifier || "").match(/\/([A-Za-z][A-Za-z0-9]*)/);
+                    return match ? match[1] : null;
+                }
+
                 generate(cardCollection)
                 {
                     let output = "Set Number,Card Number,Variant,Count,Name,Color,Rarity\n";
@@ -1218,17 +1229,26 @@
 
                         const setCode = String(card.cardInfo.setCode).padStart(3, '0');
                         let number = String(card.cardInfo.number);
-                        
+
                         if (card.cardInfo.variant != null)
                         {
-                            number += card.cardInfo.variant;        
+                            number += card.cardInfo.variant;
                         }
 
+                        const promoToken = this.getPromoToken(card.cardInfo);
+                        if (promoToken != null)
+                        {
+                            number += '/' + promoToken;
+                        }
+
+                        const rarity = promoToken != null ? "Promo" : card.cardInfo.rarity;
+                        const name = '"' + card.cardInfo.fullName + '"';
+
                         if (card.regularCount > 0)
-                            output += setCode + ',' + number + ',' + 'normal,' + card.regularCount + ',' + card.cardInfo.fullName + ',' + card.cardInfo.color + ',' + card.cardInfo.rarity + "\n";
+                            output += setCode + ',' + number + ',' + 'normal,' + card.regularCount + ',' + name + ',' + card.cardInfo.color + ',' + rarity + "\n";
 
                         if (card.foiledCount > 0)
-                            output += setCode + ',' + number + ',' + 'foil,' + card.foiledCount + ',' + card.cardInfo.fullName + ',' + card.cardInfo.color + ',' + card.cardInfo.rarity + "\n";
+                            output += setCode + ',' + number + ',' + 'foil,' + card.foiledCount + ',' + name + ',' + card.cardInfo.color + ',' + rarity + "\n";
                     }
 
                     return output;
