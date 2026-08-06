@@ -972,7 +972,7 @@
                     if (LorcanaCards._allCardsCache != null)
                         return LorcanaCards._allCardsCache;
 
-                    // Downloaded on 2026-07-24 from: https://lorcanajson.org/files/current/en/allCards.json
+                    // Downloaded on 2026-08-07 from: https://lorcanajson.org/files/current/en/allCards.json
                     // It's downloaded to avoid extra load for the source.
                     const lorcanaAllCardsUrl = "data/allCards.json";
                     const data = await (await fetch(lorcanaAllCardsUrl)).json();
@@ -1080,6 +1080,13 @@
                         const card = backup.OwnedCardQuantitiesV2[i];
 
                         const cardInfo = this.getCardInfo(card.Id);
+                        // Cards from a set newer than the bundled database won't be found.
+                        // Skip them instead of throwing, otherwise the whole preview silently breaks.
+                        if (cardInfo == null)
+                        {
+                            console.warn("Skipping unknown card id " + card.Id + " (not in card database)");
+                            continue;
+                        }
                         const setInfo = this.getSetInfo(cardInfo.setCode);
 
                         // If there is no regular alternative, than it's foiled version
